@@ -32,6 +32,7 @@ int no_colors = 0;
 int main(int argc, char **argv)
 {
 	struct stringlist *batch_commands = NULL;
+	const char *home;
 	out("Welcome to the \033[38;5;34mGame\033[38;5;214mSurge\033[0m config management tool.");
 
 #ifdef DEBUG_OUTPUT
@@ -40,8 +41,32 @@ int main(int argc, char **argv)
 	debug_output_enabled = 0;
 #endif
 
+	home = getenv("HOME");
+	if(home && *home)
+	{
+		char file[PATH_MAX];
+		char buf[256];
+		FILE *fp;
+		snprintf(file, sizeof(file), "%s/.gsconf_dir", home);
+		if((fp = fopen(file, "r")))
+		{
+			if(fgets(buf, sizeof(buf), fp))
+			{
+				trim(buf);
+				if(*buf)
+				{
+					out("Working directory: %s", buf);
+					chdir(buf);
+				}
+			}
+
+			fclose(fp);
+		}
+	}
+
         int c;
         struct option options[] = {
+		{ "workdir", 1, 0, 'w' },
 		{ "ssh-passphrase", 2, 0, 's' },
 		{ "debug", 0, 0, 'd' },
 		{ "batch", 1, 0, 'b' },
@@ -53,6 +78,15 @@ int main(int argc, char **argv)
 	{
 		switch(c)
 		{
+			case 'w':
+				if(chdir(optarg) != 0)
+				{
+					error("Could not chdir() to `%s': %s", optarg, strerror(errno));
+					return 1;
+				}
+
+				break;
+
 			case 'd':
 				debug_output_enabled = !debug_output_enabled;
 				break;
@@ -129,7 +163,6 @@ int main(int argc, char **argv)
 		char *tmp = conf_get("history", DB_STRING);
 		if(tmp && !strncmp(tmp, "~/", 2))
 		{
-			const char *home = getenv("HOME");
 			if(!home || !*home)
 			{
 				error("HOME is not set; disable history or use a path not starting with `~/'");
