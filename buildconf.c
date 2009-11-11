@@ -621,8 +621,6 @@ static void config_build_forwards(struct server_info *server, FILE *file)
 		}
 		fprintf(file, "};\n");
 	}
-	else
-		fprintf(file, "# No Forwards\n");
 
 	pgsql_free(res);
 }
