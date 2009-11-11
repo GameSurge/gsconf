@@ -13,14 +13,14 @@
 
 // SSH key for server login
 "sshkey" = {
-	"pub" = "testkey/id_rsa.pub";
-	"priv" = "testkey/id_rsa";
+	"pub" = "gskey/id_rsa.pub";
+	"priv" = "gskey/id_rsa";
 	"ask_passphrase" = "0";
-	"passphrase" = "meow!";
+	"passphrase" = "secret";
 };
 
 "defaults" = {
-	"server_port" = "4242";
+	"server_port" = "4200";
 	// Only for leaves
 	"client_ports" = ("6660", "6666", "6667", "6668", "6669");
 	"client_connclass" = "Users";
