@@ -287,6 +287,7 @@ static void config_build_connects(struct server_info *server, FILE *file)
 	res = pgsql_query("SELECT	s.name,\
 					COALESCE(p.ip, server_private_ip(l.server, l.hub, true)) AS irc_ip_priv,\
 					COALESCE(p.port, s.server_port) AS server_port,\
+					server_private_ip(l.server, l.hub, false) AS vhost,\
 					l.autoconnect\
 			   FROM		links l\
 			   JOIN		servers s ON (s.name = l.hub)\
@@ -297,6 +298,7 @@ static void config_build_connects(struct server_info *server, FILE *file)
 
 	for(int i = 0; i < rows; i++)
 	{
+		const char *vhost;
 		int autoconnect = !strcasecmp(pgsql_nvalue(res, i, "autoconnect"), "t");
 		char *connclass = "LeafToHub";
 		if(server->type == SERVER_HUB)
@@ -307,6 +309,8 @@ static void config_build_connects(struct server_info *server, FILE *file)
 		fprintf(file, "Connect {\n");
 		fprintf(file, "\tname = \"%s\";\n", pgsql_nvalue(res, i, "name"));
 		fprintf(file, "\thost = \"%s\";\n", pgsql_nvalue(res, i, "irc_ip_priv"));
+		if((vhost = pgsql_nvalue(res, i, "vhost")) && strcmp(vhost, server->irc_ip_priv))
+			fprintf(file, "\tvhost = \"%s\";\n", vhost);
 		fprintf(file, "\tpassword = \"%s\";\n", server->link_pass);
 		fprintf(file, "\tport = %u;\n", atoi(pgsql_nvalue(res, i, "server_port")));
 		fprintf(file, "\tclass = \"%s\";\n", connclass);
