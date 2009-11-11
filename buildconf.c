@@ -492,10 +492,13 @@ static void config_build_uworld(struct server_info *server, FILE *file)
 	res = pgsql_query("SELECT name FROM services WHERE flag_uworld = true", 1, NULL);
 	rows = pgsql_num_rows(res);
 
-	fprintf(file, "UWorld {\n");
-	for(int i = 0; i < rows; i++)
-		fprintf(file, "\tname = \"%s\";\n", pgsql_nvalue(res, i, "name"));
-	fprintf(file, "};\n");
+	if(rows)
+	{
+		fprintf(file, "UWorld {\n");
+		for(int i = 0; i < rows; i++)
+			fprintf(file, "\tname = \"%s\";\n", pgsql_nvalue(res, i, "name"));
+		fprintf(file, "};\n");
+	}
 
 	pgsql_free(res);
 }
