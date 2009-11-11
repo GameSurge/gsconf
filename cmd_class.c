@@ -206,7 +206,7 @@ CMD_FUNC(class_info)
 	SHOW_PRIV("flood",		0, 0);
 	SHOW_PRIV("pseudoflood",	0, 1);
 	SHOW_PRIV("gline_immune",	0, 0);
-	SHOW_PRIV("chan_limit",		1, 0);
+	SHOW_PRIV("chan_limit",		1, 1);
 	SHOW_PRIV("die",		0, 1);
 	SHOW_PRIV("restart",		0, 1);
 #undef SHOW_PRIV
