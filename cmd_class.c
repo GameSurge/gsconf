@@ -416,8 +416,8 @@ CMD_FUNC(class_add)
 		     	($1, $2, $3, $4, $5,\
 			 $6, $7, $8)",
 		    0,
-		    stringlist_build(name, pingfreq, maxlinks, sendq, recvq,
-			    	     usermode, fakehost, local, NULL));
+		    stringlist_build_n(8, name, pingfreq, maxlinks, sendq, recvq,
+				       usermode, fakehost, local));
 
 	out_color(COLOR_LIME, "Connclass `%s' added successfully", name);
 
@@ -576,6 +576,8 @@ CMD_FUNC(class_mod)
 		}
 		else if(!strcmp(argv[i], "--fakehost"))
 		{
+			char *fakehost;
+
 			if(i == argc - 1)
 			{
 				error("--fakehost needs an argument");
@@ -583,15 +585,18 @@ CMD_FUNC(class_mod)
 				return;
 			}
 
-			if(strchr(argv[i + 1], ' '))
+			fakehost = argv[i + 1];
+			if(!strcmp(fakehost, "*"))
+				fakehost = NULL;
+			else if(strchr(argv[i + 1], ' '))
 			{
 				error("Fakehost cannot contain spaces");
 				pgsql_rollback();
 				return;
 			}
 
-			out("Setting fakehost: %s", argv[i + 1]);
-			pgsql_query("UPDATE connclasses_users SET fakehost = $1 WHERE name = $2", 0, stringlist_build(argv[i + 1], name, NULL));
+			out("Setting fakehost: %s", fakehost ? fakehost : "(none)");
+			pgsql_query("UPDATE connclasses_users SET fakehost = $1 WHERE name = $2", 0, stringlist_build_n(2, fakehost, name));
 			i++;
 			modified = 1;
 		}
