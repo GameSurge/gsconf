@@ -417,8 +417,15 @@ static void config_build_ports(struct server_info *server, FILE *file)
 		atoi(server->server_port), server->irc_ip_priv);
 	// Default server port on local IP
 	if(server->irc_ip_priv_local)
+	{
+		char ip[45], *tmp;
+		strlcpy(ip, server->irc_ip_priv_local, sizeof(ip));
+		// Get rid of cidr part. We want the plain ip
+		if((tmp = strchr(ip, '/')))
+			*tmp = '\0';
 		fprintf(file, "Port { port = %u; vhost = \"%s\"; server = yes; hidden = yes; };\n",
-			atoi(server->server_port), server->irc_ip_priv_local);
+			atoi(server->server_port), ip);
+	}
 
 	res = pgsql_query("SELECT	port,\
 					ip,\
