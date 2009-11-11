@@ -746,7 +746,14 @@ CMD_FUNC(server_port_del)
 	}
 	else
 	{
-		// IP given, check if the port exists on that ip
+		// IP given, check if the port exists on that ip - but first validate the IP
+
+		if(!pgsql_valid_for_type(argv[3], "inet"))
+		{
+			error("The IP doesn't look like a valid IP");
+			goto out;
+		}
+
 		cnt = pgsql_query_int("SELECT COUNT(*) FROM ports WHERE server = $1 AND port = $2 AND ip = $3", stringlist_build(server->name, argv[2], argv[3], NULL));
 		if(!cnt)
 		{
@@ -774,12 +781,6 @@ CMD_FUNC(server_port_del)
 	}
 	else if(argc > 3)
 	{
-		if(!pgsql_valid_for_type(argv[3], "inet"))
-		{
-			error("The IP doesn't look like a valid IP");
-			goto out;
-		}
-
 		tmp = pgsql_query_str("SELECT id FROM ports WHERE server = $1 AND port = $2 AND ip = $3", stringlist_build(server->name, argv[2], argv[3], NULL));
 		snprintf(msg, sizeof(msg), "Port %s:%s deleted successfully", argv[3], argv[2]);
 	}
