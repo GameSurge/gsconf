@@ -55,6 +55,8 @@
 # define UNUSED_ARG(ARG) ARG __attribute__((unused))
 # if __GNUC__ >= 4
 #  define NULL_SENTINEL __attribute__((sentinel))
+# else
+#  define NULL_SENTINEL
 # endif
 #else
 # define UNUSED_ARG(ARG) ARG
