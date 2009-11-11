@@ -398,7 +398,7 @@ CREATE TABLE servers (
     "type" character varying(5) NOT NULL,
     description character varying(64),
     irc_ip_priv inet NOT NULL,
-    irc_ip_priv_local inet
+    irc_ip_priv_local inet,
     irc_ip_pub inet NOT NULL,
     "numeric" integer NOT NULL,
     contact character varying(64),
