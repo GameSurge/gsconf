@@ -138,6 +138,9 @@ CMD_FUNC(server_info)
 	putc('\n', stdout);
 	out("Ports:");
 	out("  %s SH \033[" COLOR_DARKGRAY "m%-15s\033[0m (main server port)", server->server_port, server->irc_ip_priv);
+	if(server->irc_ip_priv_local)
+		out("  %s SH \033[" COLOR_DARKGRAY "m%-15s\033[0m (main server port on local ip)", server->server_port, server->irc_ip_priv_local);
+
 	for(int i = 0; i < rows; i++)
 	{
 		const char *ip;
@@ -267,21 +270,21 @@ CMD_FUNC(server_add)
 	// We got all information; insert it into the database
 	pgsql_begin();
 	pgsql_query("INSERT INTO servers\
-			(name, type, description, irc_ip_priv, irc_ip_pub,\
-			 numeric, contact, location1, location2, provider,\
-			 sno_connexit, ssh_user, ssh_host, ssh_port, link_pass,\
-			 server_port)\
+			(name, type, description, irc_ip_priv, irc_ip_priv_local,\
+			 irc_ip_pub, numeric, contact, location1, location2,\
+			 provider, sno_connexit, ssh_user, ssh_host, ssh_port,\
+			 link_pass, server_port)\
 		     VALUES\
 		     	($1, $2, $3, $4, $5,\
 			 $6, $7, $8, $9, $10,\
 			 $11, $12, $13, $14, $15,\
-			 $16)",
+			 $16, $17)",
 		    0,
-		    stringlist_build_n(16,
-			data->name, serverinfo_db_from_type(data), data->description, data->irc_ip_priv, data->irc_ip_pub,
-			data->numeric, data->contact, data->location1, data->location2, data->provider,
-			(data->sno_connexit ? "t" : "f"), data->ssh_user, data->ssh_host, data->ssh_port, data->link_pass,
-			data->server_port));
+		    stringlist_build_n(17,
+			data->name, serverinfo_db_from_type(data), data->description, data->irc_ip_priv, data->irc_ip_priv_local,
+			data->irc_ip_pub, data->numeric, data->contact, data->location1, data->location2,
+			data->provider, (data->sno_connexit ? "t" : "f"), data->ssh_user, data->ssh_host, data->ssh_port,
+			data->link_pass, data->server_port));
 
 	// Add default ports / client authorizations
 	if(data->type == SERVER_LEAF)
@@ -381,6 +384,7 @@ CMD_FUNC(server_edit)
 
 	UPDATE_FIELD(numeric);
 	UPDATE_FIELD(irc_ip_priv);
+	UPDATE_FIELD(irc_ip_priv_local);
 	UPDATE_FIELD(irc_ip_pub);
 	UPDATE_FIELD(description);
 	UPDATE_FIELD(contact);

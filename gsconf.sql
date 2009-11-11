@@ -35,6 +35,55 @@ CREATE DOMAIN ircd_oper_priv_status AS smallint NOT NULL
 ALTER DOMAIN public.ircd_oper_priv_status OWNER TO gsdev;
 
 --
+-- Name: server_private_ip(character varying, character varying, boolean); Type: FUNCTION; Schema: public; Owner: gsdev
+--
+
+CREATE FUNCTION server_private_ip(server character varying, hub character varying, want_hub boolean) RETURNS inet
+    AS $$DECLARE
+server_ip inet;
+server_ip_local inet;
+hub_ip inet;
+hub_ip_local inet;
+use_local boolean;
+BEGIN
+use_local := true;
+-- Fetch server ips
+SELECT irc_ip_priv, irc_ip_priv_local
+INTO STRICT server_ip, server_ip_local
+FROM servers WHERE name = server;
+-- Fetch hub ips
+SELECT irc_ip_priv, irc_ip_priv_local
+INTO STRICT hub_ip, hub_ip_local
+FROM servers WHERE name = hub;
+
+-- If one of the servers doesn't has a local IP set, use the regular ip
+IF(server_ip_local ISNULL OR hub_ip_local ISNULL) THEN
+  use_local := false;
+-- If the local IPs aren't in the same subnet, use the regular ip
+ELSIF(network(server_ip_local) != network(hub_ip_local)) THEN
+  use_local := false;
+END IF;
+
+IF(use_local) THEN
+  IF(want_hub) THEN
+    RETURN host(hub_ip_local);
+  ELSE
+    RETURN host(server_ip_local);
+  END IF;
+ELSE
+  IF(want_hub) THEN
+    RETURN host(hub_ip);
+  ELSE
+    RETURN host(server_ip);
+  END IF;
+END IF;
+END$$
+    LANGUAGE plpgsql STABLE;
+
+
+ALTER FUNCTION public.server_private_ip(server character varying, hub character varying, want_hub boolean) OWNER TO gsdev;
+
+--
 -- Name: valid_for_type(character varying, character varying); Type: FUNCTION; Schema: public; Owner: gsdev
 --
 
@@ -169,8 +218,6 @@ ALTER SEQUENCE forwards_id_seq OWNED BY forwards.id;
 -- Name: forwards_id_seq; Type: SEQUENCE SET; Schema: public; Owner: gsdev
 --
 
-SELECT pg_catalog.setval('forwards_id_seq', 10, true);
-
 
 --
 -- Name: jupes; Type: TABLE; Schema: public; Owner: gsdev; Tablespace:
@@ -300,8 +347,6 @@ ALTER SEQUENCE ports_id_seq OWNED BY ports.id;
 -- Name: ports_id_seq; Type: SEQUENCE SET; Schema: public; Owner: gsdev
 --
 
-SELECT pg_catalog.setval('ports_id_seq', 37, true);
-
 
 --
 -- Name: pseudos; Type: TABLE; Schema: public; Owner: gsdev; Tablespace:
@@ -343,8 +388,6 @@ ALTER SEQUENCE pseudos_id_seq OWNED BY pseudos.id;
 -- Name: pseudos_id_seq; Type: SEQUENCE SET; Schema: public; Owner: gsdev
 --
 
-SELECT pg_catalog.setval('pseudos_id_seq', 27, true);
-
 
 --
 -- Name: servers; Type: TABLE; Schema: public; Owner: gsdev; Tablespace:
@@ -355,6 +398,7 @@ CREATE TABLE servers (
     "type" character varying(5) NOT NULL,
     description character varying(64),
     irc_ip_priv inet NOT NULL,
+    irc_ip_priv_local inet
     irc_ip_pub inet NOT NULL,
     "numeric" integer NOT NULL,
     contact character varying(64),
@@ -583,6 +627,7 @@ INSERT INTO jupes VALUES ('OneLetter', 'A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,
 --
 -- Data for Name: webirc2servers; Type: TABLE DATA; Schema: public; Owner: gsdev
 --
+
 
 --
 -- Name: clients_pkey; Type: CONSTRAINT; Schema: public; Owner: gsdev; Tablespace:

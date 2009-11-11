@@ -285,7 +285,7 @@ static void config_build_connects(struct server_info *server, FILE *file)
 	fprintf(file, "# Uplinks\n");
 
 	res = pgsql_query("SELECT	s.name,\
-					COALESCE(p.ip, s.irc_ip_priv) AS irc_ip_priv,\
+					COALESCE(p.ip, server_private_ip(l.server, l.hub, true)) AS irc_ip_priv,\
 					COALESCE(p.port, s.server_port) AS server_port,\
 					l.autoconnect\
 			   FROM		links l\
@@ -322,11 +322,11 @@ static void config_build_connects(struct server_info *server, FILE *file)
 
 	// Connect blocks for servers to connect to this hub
 	res = pgsql_query("SELECT	s.name,\
-					s.irc_ip_priv,\
+					server_private_ip(l.server, l.hub, false) AS irc_ip_priv,\
 					s.link_pass,\
 					s.server_port,\
 					s.type,\
-					p.ip AS vhost\
+					COALESCE(p.ip, server_private_ip(l.server, l.hub, true)) AS vhost\
 			   FROM		links l\
 			   JOIN		servers s ON (s.name = l.server)\
 			   LEFT JOIN	ports p ON (p.id = l.port)\
@@ -353,7 +353,7 @@ static void config_build_connects(struct server_info *server, FILE *file)
 		fprintf(file, "Connect {\n");
 		fprintf(file, "\tname = \"%s\";\n", pgsql_nvalue(res, i, "name"));
 		fprintf(file, "\thost = \"%s\";\n", pgsql_nvalue(res, i, "irc_ip_priv"));
-		if((vhost = pgsql_nvalue(res, i, "vhost")))
+		if((vhost = pgsql_nvalue(res, i, "vhost")) && strcmp(vhost, server->irc_ip_priv))
 			fprintf(file, "\tvhost = \"%s\";\n", vhost);
 		fprintf(file, "\tpassword = \"%s\";\n", pgsql_nvalue(res, i, "link_pass"));
 		fprintf(file, "\tport = %u;\n", atoi(pgsql_nvalue(res, i, "server_port")));
@@ -411,6 +411,10 @@ static void config_build_ports(struct server_info *server, FILE *file)
 	// Default server port
 	fprintf(file, "Port { port = %u; vhost = \"%s\"; server = yes; hidden = yes; };\n",
 		atoi(server->server_port), server->irc_ip_priv);
+	// Default server port on local IP
+	if(server->irc_ip_priv_local)
+		fprintf(file, "Port { port = %u; vhost = \"%s\"; server = yes; hidden = yes; };\n",
+			atoi(server->server_port), server->irc_ip_priv_local);
 
 	res = pgsql_query("SELECT	port,\
 					ip,\

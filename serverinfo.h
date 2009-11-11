@@ -25,6 +25,7 @@ struct server_info
 	char *numeric;
 	char *link_pass;
 	char *irc_ip_priv;
+	char *irc_ip_priv_local;
 	char *irc_ip_pub;
 	char *server_port;
 	char *description;

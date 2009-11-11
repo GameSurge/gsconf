@@ -48,6 +48,7 @@ struct server_info *serverinfo_load_pg(PGresult *res, int row)
 	LOAD_FIELD(numeric);
 	LOAD_FIELD(link_pass);
 	LOAD_FIELD(irc_ip_priv);
+	LOAD_FIELD(irc_ip_priv_local);
 	LOAD_FIELD(irc_ip_pub);
 	LOAD_FIELD(server_port);
 	LOAD_FIELD(description);
@@ -89,6 +90,7 @@ void serverinfo_copy(struct server_info *to, struct server_info *from)
 	COPY_FIELD(numeric);
 	COPY_FIELD(link_pass);
 	COPY_FIELD(irc_ip_priv);
+	COPY_FIELD(irc_ip_priv_local);
 	COPY_FIELD(irc_ip_pub);
 	COPY_FIELD(server_port);
 	COPY_FIELD(description);
@@ -227,7 +229,7 @@ again:
 	// Prompt private server ip
 	while(1)
 	{
-		line = readline_noac("Private IP", data.irc_ip_priv);
+		line = readline_noac("Private IP (use non-local IP if the server has both)", data.irc_ip_priv);
 		if(!line)
 			goto out;
 
@@ -243,6 +245,37 @@ again:
 		xfree(data.irc_ip_priv);
 		data.irc_ip_priv = strdup(line);
 		break;
+	}
+
+	// Prompt local server ip
+	int has_local_ip = readline_yesno("Does this server have a local IP?", data.irc_ip_priv_local ? "Yes" : "No");
+	if(has_local_ip)
+	{
+		out("Enter the IP in CIDR style. If two servers have local IPs which are in the same subnet, they will be linked via those ips.");
+		while(1)
+		{
+			line = readline_noac("Local IP", data.irc_ip_priv_local);
+			if(!line)
+				goto out;
+
+			if(!*line)
+				continue;
+
+			if(!strchr(line, '/') || !pgsql_valid_for_type(line, "inet"))
+			{
+				error("This IP doesn't look like a valid IP mask");
+				continue;
+			}
+
+			xfree(data.irc_ip_priv_local);
+			data.irc_ip_priv_local = strdup(line);
+			break;
+		}
+	}
+	else
+	{
+		xfree(data.irc_ip_priv_local);
+		data.irc_ip_priv_local = NULL;
 	}
 
 	// Prompt public server ip
@@ -451,6 +484,7 @@ again:
 	out("%sNumeric:     %s", FIELD_CHANGED(numeric), data.numeric);
 	out("%sLink Pass:   %s", FIELD_CHANGED(link_pass), data.link_pass);
 	out("%sPriv IP:     %s", FIELD_CHANGED(irc_ip_priv), data.irc_ip_priv);
+	out("%sLocal IP:    %s", FIELD_CHANGED(irc_ip_priv_local), data.irc_ip_priv_local);
 	out("%sPub IP:      %s", FIELD_CHANGED(irc_ip_pub), data.irc_ip_pub);
 	out("%sServer Port: %s", FIELD_CHANGED(server_port), data.server_port);
 	out("%sDescr:       %s", FIELD_CHANGED(description), SHOW_OPTIONAL(description));
@@ -494,6 +528,7 @@ void serverinfo_show(struct server_info *info)
 	out("Numeric:     %s", info->numeric);
 	out("Link Pass:   %s", info->link_pass);
 	out("Priv IP:     %s", info->irc_ip_priv);
+	out("Local IP:    %s", SHOW_OPTIONAL(irc_ip_priv_local));
 	out("Pub IP:      %s", info->irc_ip_pub);
 	out("Server Port: %s", info->server_port);
 	out("Descr:       %s", SHOW_OPTIONAL(description));
@@ -513,6 +548,7 @@ void serverinfo_free(struct server_info *info)
 	xfree(info->numeric);
 	xfree(info->link_pass);
 	xfree(info->irc_ip_priv);
+	xfree(info->irc_ip_priv_local);
 	xfree(info->irc_ip_pub);
 	xfree(info->server_port);
 	xfree(info->description);
