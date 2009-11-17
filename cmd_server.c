@@ -23,6 +23,8 @@ CMD_FUNC(server_edit);
 CMD_TAB_FUNC(server_edit);
 CMD_FUNC(server_del);
 CMD_TAB_FUNC(server_del);
+CMD_FUNC(server_rename);
+CMD_TAB_FUNC(server_rename);
 CMD_FUNC(server_install);
 CMD_TAB_FUNC(server_install);
 CMD_FUNC(server_port_add);
@@ -57,6 +59,7 @@ static struct command subcommands[] = {
 	CMD("add", server_add, "Add a server"),
 	CMD_TC("edit", server_edit, "Edit a server"),
 	CMD_TC("del", server_del, "Delete a server"),
+	CMD_TC("rename", server_rename, "Rename a server"),
 	CMD_TC("install", server_install, "Install the ircd on a server"),
 	CMD_TC("addport", server_port_add, "Add a port"),
 	CMD_TC("delport", server_port_del, "Delete a port"),
@@ -78,6 +81,7 @@ void cmd_server_init()
 	cmd_alias("addserver", "server", "add");
 	cmd_alias("editserver", "server", "edit");
 	cmd_alias("delserver", "server", "del");
+	cmd_alias("renameserver", "server", "rename");
 	cmd_alias("install", "server", "install");
 	cmd_alias("addport", "server", "addport");
 	cmd_alias("delport", "server", "delport");
@@ -428,6 +432,7 @@ CMD_FUNC(server_del)
 {
 	char *line;
 	char promptbuf[128];
+	struct server_info *server;
 
 	if(argc < 2)
 	{
@@ -435,26 +440,82 @@ CMD_FUNC(server_del)
 		return;
 	}
 
-	int cnt = pgsql_query_int("SELECT COUNT(*) FROM servers WHERE lower(name) = lower($1)", stringlist_build(argv[1], NULL));
-	if(!cnt)
+	if(!(server = serverinfo_load(argv[1])))
 	{
 		error("A server named `%s' does not exist", argv[1]);
 		return;
 	}
 
-	snprintf(promptbuf, sizeof(promptbuf), "Do you really want to delete the server %s?", argv[1]);
+	snprintf(promptbuf, sizeof(promptbuf), "Do you really want to delete the server %s?", server->name);
 	while(1)
 	{
 		line = readline_noac(promptbuf, "No");
 		if(true_string(line))
 			break;
 		else if(false_string(line))
+		{
+			serverinfo_free(server);
 			return;
+		}
 	}
 
-	pgsql_query("DELETE FROM servers WHERE lower(name) = lower($1)", 0, stringlist_build(argv[1], NULL));
-	out("Server `%s' deleted successfully", argv[1]);
+	pgsql_query("DELETE FROM servers WHERE name = $1", 0, stringlist_build(server->name, NULL));
+	config_delete(server);
+	out("Server `%s' deleted successfully", server->name);
 	out("Please do not forget to remove ircd and config manually!");
+	serverinfo_free(server);
+}
+
+CMD_FUNC(server_rename)
+{
+	char *line, *name = NULL;
+	struct server_info *server;
+
+	if(argc < 2)
+	{
+		out("Usage: renameserver <server>");
+		return;
+	}
+
+	if(!(server = serverinfo_load(argv[1])))
+	{
+		error("A server named `%s' does not exist", argv[1]);
+		return;
+	}
+
+	while(1)
+	{
+		line = readline_noac("New server name", NULL);
+		if(!line || !*line)
+			goto out;
+
+		if(!strchr(line, '.') || line[0] == '.' || line[strlen(line) - 1] == '.')
+		{
+			error("Server name must contain a `.' which is not at the beginning/end");
+			continue;
+		}
+
+		if(!strcmp(line, server->name))
+			continue;
+
+		int cnt = pgsql_query_int("SELECT COUNT(*) FROM servers WHERE lower(name) = lower($1) AND name != $2", stringlist_build(line, server->name, NULL));
+		if(cnt)
+		{
+			error("A server with this name already exists");
+			continue;
+		}
+
+		name = strdup(line);
+		break;
+	}
+
+	pgsql_query("UPDATE servers SET name = $1 WHERE name = $2", 0, stringlist_build(name, server->name, NULL));
+	config_rename(server->name, name);
+	out("Server `%s' renamed successfully to `%s'", server->name, name);
+
+out:
+	xfree(name);
+	serverinfo_free(server);
 }
 
 CMD_FUNC(server_install)
@@ -997,6 +1058,13 @@ CMD_TAB_FUNC(server_info)
 }
 
 CMD_TAB_FUNC(server_edit)
+{
+	if(CAN_COMPLETE_ARG(1))
+		return server_generator(text, state);
+	return NULL;
+}
+
+CMD_TAB_FUNC(server_rename)
 {
 	if(CAN_COMPLETE_ARG(1))
 		return server_generator(text, state);

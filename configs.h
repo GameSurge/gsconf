@@ -14,6 +14,8 @@ enum config_type
 };
 
 const char *config_filename(struct server_info *server, enum config_type type);
+void config_rename(const char *old, const char *new);
+void config_delete(struct server_info *server);
 int config_download(struct server_info *server, struct ssh_session *session);
 int config_upload(struct server_info *server, struct ssh_session *session, enum config_type type);
 void config_generate(const char *server);

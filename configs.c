@@ -11,6 +11,8 @@
 
 static int config_generate_server(struct server_info *server);
 
+// Note: This function may only use server->name since config_rename()
+// passes a struct server_info which has only this field set!
 const char *config_filename(struct server_info *server, enum config_type type)
 {
 	static char filenames[CONFIG_NUM_TYPES][PATH_MAX];
@@ -41,6 +43,28 @@ const char *config_filename(struct server_info *server, enum config_type type)
 
 	expand_num_args(filenames[type], sizeof(filenames[type]), fmt, 1, server->name);
 	return filenames[type];
+}
+
+void config_rename(const char *old, const char *new)
+{
+	struct server_info s_old, s_new;
+	s_old.name = (char *)old;
+	s_new.name = (char *)new;
+
+	for(enum config_type i = 0; i < CONFIG_NUM_TYPES; i++)
+	{
+		char old_path[PATH_MAX];
+		// Copy old path to temporary buffer since the second
+		// config_filename() call would overwrite it
+		strlcpy(old_path, config_filename(&s_old, i), sizeof(old_path));
+		rename(old_path, config_filename(&s_new, i));
+	}
+}
+
+void config_delete(struct server_info *server)
+{
+	for(enum config_type i = 0; i < CONFIG_NUM_TYPES; i++)
+		unlink(config_filename(server, i));
 }
 
 int config_download(struct server_info *server, struct ssh_session *session)
