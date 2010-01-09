@@ -1,6 +1,35 @@
 #include "common.h"
 #include "table.h"
 #include "stringbuffer.h"
+#include "strnatcmp.h"
+
+// Thanks to qsort not offering a custom argument we need a global var for that.
+static unsigned int table_sort_col;
+
+size_t table_strlen(const char *str, unsigned int col)
+{
+	return strlen(str);
+}
+
+size_t table_strlen_colors(const char *str, unsigned int col)
+{
+	if(!strchr(str, '\033'))
+		return strlen(str);
+
+	size_t len = 0;
+	for(const char *c = str; *c; c++)
+	{
+		if(*c == '\033')
+		{
+			while(*c && *c != 'm')
+				c++;
+			continue;
+		}
+
+		len++;
+	}
+	return len;
+}
 
 struct table *table_create(unsigned int cols, unsigned int rows)
 {
@@ -13,6 +42,8 @@ struct table *table_create(unsigned int cols, unsigned int rows)
 	table->data = calloc(table->rows, sizeof(char **));
 	for(unsigned int i = 0; i < table->rows; i++)
 		table->data[i] = calloc(table->cols, sizeof(char *));
+
+	table->field_len = table_strlen;
 
 	return table;
 }
@@ -98,14 +129,14 @@ void table_send(struct table *table)
 	if(table->header)
 	{
 		for(unsigned int col = 0; col < table->cols; col++)
-			maxlens[col] = strlen(table->header[col]);
+			maxlens[col] = table->field_len(table->header[col], col);
 	}
 
 	for(unsigned int col = 0; col < table->cols; col++)
 	{
 		for(unsigned int row = 0; row < table->rows; row++)
 		{
-			len = table->data[row][col] ? strlen(table->data[row][col]) : 0;
+			len = table->data[row][col] ? table->field_len(table->data[row][col], col) : 0;
 			if(len > maxlens[col])
 				maxlens[col] = len;
 		}
@@ -120,7 +151,7 @@ void table_send(struct table *table)
 		{
 			if(row == -1) // Header
 			{
-				spaces = maxlens[col] - (ptr[col] ? strlen(ptr[col]) : 0);
+				spaces = maxlens[col] - (ptr[col] ? table->field_len(ptr[col], col) : 0);
 				stringbuffer_append_string(line, "\033[4m");
 				if(ptr[col])
 					stringbuffer_append_string(line, ptr[col]);
@@ -128,7 +159,7 @@ void table_send(struct table *table)
 			}
 			else // Data
 			{
-				spaces = maxlens[col] - (ptr[col] ? strlen(ptr[col]) : 0);
+				spaces = maxlens[col] - (ptr[col] ? table->field_len(ptr[col], col) : 0);
 				if(col_bold(table, col))
 					stringbuffer_append_string(line, "\033[1m");
 				while(col_ralign(table, col) && spaces--)
@@ -201,4 +232,16 @@ void table_col_fmt(struct table *table, unsigned int row, unsigned int col, cons
 	va_start(args, fmt);
 	vasprintf(&table->data[row][col], fmt, args);
 	va_end(args);
+}
+
+static int table_cmp(const void *a, const void *b)
+{
+	return strnatcasecmp((*(const char ***)a)[table_sort_col], (*(const char ***)b)[table_sort_col]);
+}
+
+void table_sort(struct table *table, unsigned int col)
+{
+	assert(col < table->cols);
+	table_sort_col = col;
+	qsort(table->data, table->rows, sizeof(table->data[0]), table_cmp);
 }

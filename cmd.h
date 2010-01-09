@@ -4,6 +4,7 @@
 typedef void (cmd_func)(const char *cmd_line, int argc, char **argv);
 typedef char* (cmd_tab_func)(const char *text, int state);
 
+struct stringlist;
 struct command
 {
 	const char *name;
@@ -12,6 +13,7 @@ struct command
 	const char *doc;
 	struct dict *subcommands;
 	int alias;
+	struct stringlist *aliases;
 };
 
 void cmd_init();
@@ -44,10 +46,10 @@ extern int tc_argc;
 #define CMD_FUNC(FUNC)		static void cmd_func_ ## FUNC(const char *cmd_line, int argc, char **argv)
 #define CMD_TAB_FUNC(FUNC)	static char* cmd_tabfunc_ ## FUNC(const char *text, int state)
 
-#define CMD(NAME, FUNC, DOC)	{ NAME, cmd_func_ ## FUNC, NULL, DOC, NULL, 0 }
-#define CMD_TC(NAME, FUNC, DOC)	{ NAME, cmd_func_ ## FUNC, cmd_tabfunc_ ## FUNC, DOC, NULL, 0 }
-#define CMD_STUB(NAME, DOC)	{ NAME, NULL, NULL, DOC, NULL, 0 }
-#define CMD_LIST_END		{ NULL, NULL, NULL, NULL, NULL, 0 }
+#define CMD(NAME, FUNC, DOC)	{ NAME, cmd_func_ ## FUNC, NULL, DOC, NULL, 0, NULL }
+#define CMD_TC(NAME, FUNC, DOC)	{ NAME, cmd_func_ ## FUNC, cmd_tabfunc_ ## FUNC, DOC, NULL, 0, NULL }
+#define CMD_STUB(NAME, DOC)	{ NAME, NULL, NULL, DOC, NULL, 0, NULL }
+#define CMD_LIST_END		{ NULL, NULL, NULL, NULL, NULL, 0, NULL }
 
 // An argument can be completed if:
 // a) it's completely empty and there's a space after the previous argument

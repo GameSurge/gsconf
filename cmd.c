@@ -3,6 +3,9 @@
 #include "main.h"
 #include "input.h"
 #include "tokenize.h"
+#include "stringlist.h"
+#include "stringbuffer.h"
+#include "table.h"
 
 static void cmd_free_subcmds(struct command *cmd);
 static char *cmd_generator(const char *text, int state);
@@ -11,11 +14,12 @@ static struct command *cmd_find(const char *name, struct dict *list);
 CMD_FUNC(help);
 CMD_TAB_FUNC(help);
 CMD_FUNC(quit);
+CMD_FUNC(commands);
 
 
 static struct dict *command_list;
 static struct dict *cmd_generator_list = NULL;
-// Yay, global variables needed because we can't pass custom args to out rl_compentry_func
+// Yay, global variables needed because we can't pass custom args to our rl_compentry_func
 char *tc_argv_base[32] = { 0 };
 char **tc_argv = NULL;
 int tc_argc = 0;
@@ -24,6 +28,7 @@ int tc_argc = 0;
 static struct command commands[] = {
 	CMD_TC("help", help, "Display help"),
 	CMD("quit", quit, "Exit the program"),
+	CMD("commands", commands, "Display all available commands"),
 	CMD_LIST_END
 };
 
@@ -60,6 +65,8 @@ static void cmd_free_subcmds(struct command *cmd)
 {
 	if(cmd->subcommands)
 		dict_free(cmd->subcommands);
+	if(cmd->aliases)
+		stringlist_free(cmd->aliases);
 	if(cmd->alias)
 		free(cmd);
 }
@@ -94,6 +101,10 @@ void cmd_alias(const char *name, const char *cmd_name, const char *subcmd_name)
 	alias->name = name;
 	alias->alias = 1;
 	dict_insert(command_list, (char *)alias->name, alias);
+
+	if(!cmd->aliases)
+		cmd->aliases = stringlist_create();
+	stringlist_add(cmd->aliases, strdup(alias->name));
 }
 
 void cmd_handle(const char *line, int argc, char **argv, struct command *parent)
@@ -288,4 +299,71 @@ CMD_TAB_FUNC(help)
 CMD_FUNC(quit)
 {
 	quit = 1;
+}
+
+static void list_command(struct table *table, unsigned int row, struct command *cmd, const char *parent_cmd_name)
+{
+	struct stringbuffer *buf = stringbuffer_create();
+
+	// Show aliases first
+	if(cmd->aliases)
+	{
+		for(unsigned int i = 0; i < cmd->aliases->count; i++)
+		{
+			if(!no_colors)
+				stringbuffer_append_string(buf, "\033[" COLOR_YELLOW "m");
+			stringbuffer_append_string(buf, cmd->aliases->data[i]);
+			if(!no_colors)
+				stringbuffer_append_string(buf, "\033[0m");
+			stringbuffer_append_string(buf, ", ");
+		}
+	}
+
+	if(!no_colors)
+		stringbuffer_append_string(buf, "\033[" COLOR_YELLOW "m");
+	if(parent_cmd_name)
+	{
+		stringbuffer_append_string(buf, parent_cmd_name);
+		stringbuffer_append_char(buf, ' ');
+	}
+	stringbuffer_append_string(buf, cmd->name);
+	if(!no_colors)
+		stringbuffer_append_string(buf, "\033[0m");
+
+	table_col_str(table, row, 0, strdup(buf->string));
+	table_col_str(table, row, 1, (char *)cmd->doc);
+	stringbuffer_free(buf);
+}
+
+CMD_FUNC(commands)
+{
+	unsigned int row = 0;
+	struct table *table = table_create(2, 0);
+	table->field_len = table_strlen_colors;
+	table_free_column(table, 0, 1);
+
+	dict_iter(node, command_list)
+	{
+		struct command *cmd = node->data;
+		// Skip aliases, we handle them together with the main commands.
+		if(cmd->alias)
+			continue;
+
+		if(cmd->subcommands)
+		{
+			dict_iter(subnode, cmd->subcommands)
+			{
+				struct command *subcmd = subnode->data;
+				list_command(table, row++, subcmd, cmd->name);
+			}
+		}
+		else
+		{
+			list_command(table, row++, cmd, NULL);
+		}
+	}
+
+	table_sort(table, 0);
+	table_send(table);
+	table_free(table);
 }
