@@ -15,6 +15,7 @@ CMD_TAB_FUNC(conf_put);
 CMD_FUNC(conf_rehash);
 CMD_TAB_FUNC(conf_rehash);
 CMD_FUNC(conf_check);
+CMD_TAB_FUNC(conf_check);
 CMD_FUNC(conf_sync);
 CMD_TAB_FUNC(conf_sync);
 CMD_FUNC(conf_build);
@@ -33,7 +34,7 @@ static struct command subcommands[] = {
 	CMD_TC("get", conf_get, "Download a server's config"),
 	CMD_TC("put", conf_put, "Upload a server's config"),
 	CMD_TC("rehash", conf_rehash, "Rehash a server's config"),
-	CMD("check", conf_check, "Check remote configs for modifications"),
+	CMD_TC("check", conf_check, "Check remote configs for modifications"),
 	CMD_TC("sync", conf_sync, "Upload modified configs to the servers"),
 	CMD_TC("build", conf_build, "Generate local config files"),
 	CMD_TC("quicksync", conf_quicksync, "Generate local config files and then upload them to the servers"),
@@ -257,6 +258,11 @@ CMD_TAB_FUNC(conf_sync)
 }
 
 CMD_TAB_FUNC(conf_build)
+{
+	return server_generator(text, state);
+}
+
+CMD_TAB_FUNC(conf_check)
 {
 	return server_generator(text, state);
 }

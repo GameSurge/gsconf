@@ -160,7 +160,7 @@ int config_check_remote_server(struct server_info *server, enum config_type loca
 
 	if(!file_exists(config_filename(server, local_conf)))
 	{
-		out_color(COLOR_LIGHT_RED, "Local ircd.conf for `%s' does not exist; run `buildconfs' to generate config files", server->name);
+		out_color(COLOR_LIGHT_RED, "Local ircd.conf for `%s' does not exist; this command cannot be used unless configs have been uploaded at least once", server->name);
 		return 0;
 	}
 
