@@ -1,0 +1,396 @@
+GameSurge ircd config management tool
+
+REQUIREMENTS
+	libpq/PostgreSQL
+	libssh2 (http://www.libssh2.org/)
+	readline
+
+ARGUMENTS
+	-w, --workdir 'path'
+		Change the working directory
+
+	-s, --ssh-passphrase 'secret'
+		Set the default SSH passphrase.
+		No argument or '-' will prompt it via stdin.
+
+	-d, --debug
+		Toggles debug mode.
+
+	-b, --batch 'command'
+		Executes a command and terminates when finished.
+		Can be used multiple times.
+		Note that only commands which require no user interaction
+		should be executed in batch mode.
+
+	-c, --no-colors
+		Disables colorful output.
+
+FILES
+	~/.gsconf_dir
+		Default working directory.
+		May be changed with the -w argument.
+
+	gsconf.cfg
+		Main config file.
+		See gsconf.cfg.example.
+
+
+CONFIG MANAGEMENT
+	commit [args] [server]
+	quicksync [args] [server]
+	conf quicksync [args] [server]
+		Generate local config files and upload them to the servers.
+		This command should be used after any changes!
+		The following arguments are supported:
+			--check-remote
+				Check remote configs if they need to be updated
+				instead of only checking the local copies.
+			--update
+				Automatically update without confirmation.
+			--rehash
+				Automatically rehash without confirmation.
+
+	rehash <server>
+	conf rehash <server>
+		Send SIGHUP to the specified server's ircd process
+
+	checkconf [server]
+		Check remote config file(s) for modifications.
+		Only usable if live configs exist locally, i.e. not
+		before the first local->server sync.
+
+	conf get-missing
+		Download all configs from servers which do not exist
+		locally.
+
+	buildconfs [server]
+	conf build [server]
+		Generate config file(s).
+
+	syncconfs [args] [server]
+	conf sync [args] [server]
+		Upload local config files to the servers.
+		This command can only be used after running `buildconfs'.
+		Usually it is better to use `commit' which both builds
+		and syncs the config files.
+		The following arguments are supported:
+			--check-remote
+				Check remote configs if they need to be updated
+				instead of only checking the local copies.
+			--update
+				Automatically update without confirmation.
+			--rehash
+				Automatically rehash without confirmation.
+
+	getconf <server>
+		Download the config from the specified server and save
+		it as a remote config.
+		Usually not needed.
+
+	putconf <server>
+		Upload the local 'live' config to the specified server.
+		Usually not needed.
+
+
+CONNCLASS MANAGEMENT
+	classes
+	class list
+		Display a list of all client connection classes.
+
+	classinfo <name>
+	class info <name>
+		Display detailed information about a class, including
+		detailed privileges, opers and clients.
+
+	addclass
+	class add
+		Create a new client connection class.
+		Prompts for name, pingfreq, maxlinks, sendQ, recvQ, umodes,
+		fakehost and opertype.
+
+	delclass <name>
+	class del <name>
+		Delete the specified client connection class.
+		Only classes which are not used by any clients/opers can be
+		deleted. Otherwise the clients/oper using the class are displayed.
+
+	modclass <name> <args...>
+	classmod <name> <args...>
+	class mod <name> <args...>
+	class edit <name> <args...>
+		Modify the specified client connection class.
+		The following arguments are supported:
+			--fakehost fakehost
+				Set the default fakehost.
+				Setting it to '*' removes it.
+			--maxlinks number
+				Set the maxlinks, i.e. the max number
+				of clients allowed in the class.
+				Setting it to 0 will not limit them.
+			--pingfreq 'duration'
+				Set the ping frequency.
+				Must be an ircu-style duration.
+			--sendq bytes
+			--recvq bytes
+				Set the sendQ/recvQ buffer size.
+			--umode
+				Set the default usermode.
+				Setting it to '*' removes it.
+			--priv priv value
+				Set the specified privilege.
+				'priv' can be 'chan_limit', 'die', 'flood',
+				'gline_immune', 'local', 'notargetlimit',
+				'pseudoflood', 'restart', 'umode_chserv',
+				'umode_nochan' or 'umode_noidle'.
+				'value' can be 'yes', 'no' or 'inherit'.
+
+
+CLIENT AUTHORIZATION MANAGEMENT
+	clients
+	client list
+		Display a list of all client authorizations.
+
+	addclient
+	client add
+		Create a new client authorization.
+		Prompts for name, server, connclass, ident, ip, host,
+		password and maxlinks.
+
+	delclass <name> <server>
+	class del <name> <server>
+		Delete the specified client authorization on the
+		specified server.
+
+	modclient <name> <server> <args...>
+	clientmod <name> <server> <args...>
+	client mod <name> <server> <args...>
+		Modify the specified client authorization.
+		The following arguments are supported:
+			--class connclass
+				Set the connection class.
+			--host host
+				Set the host the client's ip must resolve to.
+				Setting it to '*' will allow all hosts, even
+				if the ip did not resolve at all.
+			--ident ident
+				Set the ident the client must have.
+				Setting it to '*' will allow all idents.
+			--ip ipmask
+				Set the ip (or cidr mask) the client must have.
+				Setting it to '*' will allow all ips.
+			--maxlinks number
+				Set the max. number of clients.
+				Setting it to '*' will use the connclass default.
+			--password
+				Set the password the client must specify.
+				Setting it to '*' will remove the password requirement.
+
+
+FORWARD MANAGEMENT
+	forwards
+	forward list
+		Display a list of all forwards.
+
+	addforward
+	forward add
+		Create a new forward.
+		Prompts for prefix, target and server.
+
+	delforward <prefix> [server]
+	forward del <prefix> [server]
+		Delete the specified forward.
+
+
+NICK JUPE MANAGEMENT
+	jupes
+	jupe list
+		Display a list of all nick jupes.
+
+	addjupe
+	jupe add
+		Create a new jupe.
+		Prompts for name and nicks.
+
+	deljupe <name>
+	jupe del <name>
+		Delete the specified jupe.
+
+
+SERVER LINK MANAGEMENT
+	links
+	link list
+		Display a list of all server/service links and their
+		autoconnect states.
+
+	addlink
+	link add
+		Create a new link between a server/service and a hub.
+		Prompts for server, hub and autoconnect state.
+
+	dellink <server|service> <hub>
+	link del <server|service> <hub>
+		Delete the specified link.
+
+	autoconnect <server> <hub> <on|off>
+	link autoconnect <server> <hub> <on|off>
+		Set the autoconnect state of the specified link.
+
+IRC OPERATOR MANAGEMENT
+	opers
+	oper list
+		Display a list of all opers.
+
+	operinfo <name>
+	oper info <name>
+		Display detailed information about an oper, including
+		detailed privileges and hostmasks.
+
+	addoper
+	oper add
+		Create a new oper.
+		Prompts for internal name, username, password, connclass,
+		globalness, servers and hostmasks.
+
+	deloper <name>
+	oper del <name>
+		Delete an oper.
+		Prompts for confirmation.
+
+	modoper <name> <args...>
+	opermod <name> <args...>
+	oper mod <name> <args...>
+	oper edit <name> <args...>
+		Modify the specified oper.
+		The following arguments are supported:
+			--addmask hostmask
+				Add a new ident@host mask.
+			--delmask hostmask
+				Remove the specified host mask.
+			--addserver server
+				Add the oper to the specified server.
+			--delserver server
+				Remove the oper from the specified server.
+			--class connclass
+				Set the connection class.
+			--password
+				Set the oper password.
+			--suspend
+			--unsuspend
+				Suspend/unsuspend the oper (removes his
+				oper blocks).
+			--username name
+				Set the /oper user name.
+			--priv priv value
+				Set the specified privilege.
+				'priv' can be 'chan_limit', 'die', 'flood',
+				'gline_immune', 'local', 'notargetlimit',
+				'pseudoflood', 'restart', 'umode_chserv',
+				'umode_nochan' or 'umode_noidle'.
+				'value' can be 'yes', 'no' or 'inherit'.
+
+
+PSEUDO COMMAND MANAGEMENT
+	pseudos
+	pseudo list
+		Display a list of all pseudo commands.
+
+	addpseudo
+	pseudo add
+		Create a new pseudo command.
+		Prompts for command, server, target and prepend string.
+
+	delpseudo <name> <server|*>
+	pseudo del <name> <server|*>
+		Delete the specified pseudo command.
+
+
+SERVER MANAGEMENT
+	servers, server list               Show a server list
+	serverinfo, server info            Show information about a server
+	exec                               Execute a command on a server
+	addserver, server add              Add a server
+	install, server install            Install the ircd on a server
+	delserver, server del              Delete a server
+	renameserver, server rename        Rename a server
+	editserver, server edit            Edit a server
+	addport, server addport            Add a port
+	delport, server delport            Delete a port
+	server addjupe                     Add a jupe
+	server deljupe                     Delete a jupe
+	server addwebirc                   Add a webirc authorization
+	server delwebirc                   Delete a webirc authorization
+
+
+SERVICE MANAGEMENT
+	services
+	service list
+		Display a list of all services.
+
+	addservice
+	service add
+		Create a new service.
+		Prompts for name, ip, link pass, hub flag and uworld flag.
+
+	delservice <name>
+	service del <name>
+		Delete the specified service.
+
+	editservice <name>
+	service edit <name>
+		Edit the specified service.
+		Prompts for ip, link pass, hub flag and uworld flag.
+
+
+WEBIRC MANAGEMENT
+	webircs
+	webirc list
+		Display a list of all webirc authorizations.
+
+	addwebirc
+	webirc add
+		Create a new webirc authorization.
+		Prompts for name, description, ip, password, ident and
+		hmac settings.
+
+	delwebirc <name>
+	webirc del <name>
+		Delete the specified webirc authorization.
+
+	editwebirc <name>
+	webirc edit <name>
+		Edit the specified webirc authorization.
+		Prompts for description, ip, password, ident and hmac
+		settings.
+
+
+FEATURE MANAGEMENT
+	features
+	feature list
+		Display a list of all ircd features.
+
+	delfeature <name> <*|server-type>
+	feature del <name> <*|server-type>
+		Delete the specified feature.
+		Valid server types are '*' for the default, LEAF, HUB,
+		BOTS and STAFF.
+
+	setfeature <name> <*|server-type>
+	feature set <name> <*|server-type>
+		Set the specified feature for the specified server type.
+		This command can both edit existing features or add new
+		ones.
+		Valid server types are '*' for the default, LEAF, HUB,
+		BOTS and STAFF.
+
+
+MISC
+	commands
+		Display a list of all available commands and their aliases.
+
+	help <command>
+		Display a short description if the specified command.
+
+	exit
+	quit
+		Quit the application.
+
