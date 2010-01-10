@@ -102,14 +102,20 @@ CMD_FUNC(feature_set)
 	pgsql_begin();
 	exists = pgsql_query_int("SELECT COUNT(*) FROM features WHERE name = $1 AND server_type = $2", stringlist_build(argv[1], argv[2], NULL));
 	if(!exists && !readline_yesno("Feature does not exist yet. Add it?", "Yes"))
+	{
+		pgsql_rollback();
 		return;
+	}
 
 	// Fetch old value
 	str = pgsql_query_str("SELECT value FROM features WHERE name = $1 AND server_type = $2", stringlist_build(argv[1], argv[2], NULL));
 
 	value = readline_noac("Value", exists ? str : NULL);
 	if(!value)
+	{
+		pgsql_rollback();
 		return;
+	}
 
 	if(exists && !strcmp(value, str))
 	{

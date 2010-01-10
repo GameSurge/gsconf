@@ -655,7 +655,7 @@ install:
 	}
 	else if(!ssh_file_exists(session, "ircu/bin/ircd"))
 	{
-		error("Make install succeeded but ``~/ircu/bin/ircd' does not exist. Fix this manually, then run `putconf %s'", server->name);
+		error("Make install succeeded but ``~/ircu/bin/ircd' does not exist. Fix this manually, then run `commit' to install the config");
 		goto out;
 	}
 
