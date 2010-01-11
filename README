@@ -5,6 +5,7 @@ REQUIREMENTS
 	libssh2 (http://www.libssh2.org/)
 	readline
 
+
 ARGUMENTS
 	-w, --workdir 'path'
 		Change the working directory
@@ -24,6 +25,7 @@ ARGUMENTS
 
 	-c, --no-colors
 		Disables colorful output.
+
 
 FILES
 	~/.gsconf_dir
@@ -259,6 +261,7 @@ SERVER LINK MANAGEMENT
 	autoconnect <server> <hub> <on|off>
 	link autoconnect <server> <hub> <on|off>
 		Set the autoconnect state of the specified link.
+
 
 IRC OPERATOR MANAGEMENT
 	opers
