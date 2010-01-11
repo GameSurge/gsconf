@@ -305,20 +305,98 @@ PSEUDO COMMAND MANAGEMENT
 
 
 SERVER MANAGEMENT
-	servers, server list               Show a server list
-	serverinfo, server info            Show information about a server
-	exec                               Execute a command on a server
-	addserver, server add              Add a server
-	install, server install            Install the ircd on a server
-	delserver, server del              Delete a server
-	renameserver, server rename        Rename a server
-	editserver, server edit            Edit a server
-	addport, server addport            Add a port
-	delport, server delport            Delete a port
-	server addjupe                     Add a jupe
-	server deljupe                     Delete a jupe
-	server addwebirc                   Add a webirc authorization
-	server delwebirc                   Delete a webirc authorization
+	servers
+	server list
+		Display a list of all servers.
+
+	serverinfo <server>
+	server info <server>
+		Display detailed information about a server, including
+		link information, ports, opers, clients, jupes and webirc.
+
+	exec <server> <command>
+		Execute a shell commands on the specified server.
+		Output is displayed in realtime.
+
+	addserver
+	server add
+		Create a new server.
+		Prompts for name, type, numeric, link pass, ips, server
+		port, description, contact/location/provider information,
+		connexit snotice flag and SSH login information.
+		If the server is connected to another server via a
+		private network, a private ip and a subnet mask must
+		be entered to ensure proper connectivity from/to both
+		the hubs in the private network and those which are only
+		available through public addresses.
+
+	delserver <server>
+	server del <server>
+		Delete a server.
+		Prompts for confirmation.
+
+	renameserver <server>
+	server rename <server>
+		Rename a server.
+		Prompts for the new name.
+
+	editserver <server>
+	server edit <server>
+		Edit the specified server.
+		Prompts for type, numeric, link pass, ips, server port,
+		description, contact/location/provider information,
+		connexit snotice flag and SSH login information.
+		Note that the type cannot be change from/to HUB.
+		To convert a server to a hub/non-hub, you need to delete
+		and re-add it.
+
+	install	<server> [option]
+	server install <server> [option]
+		Installs the ircd on the specified server.
+		The following options are supported, but mainly needed
+		if a step fails:
+			--reinstall
+				Skip the check if ~/ircu exists.
+			--unpack
+				Skip the check if the ircu source archive
+				exists.
+			--configure
+				Start with 'configure' (e.g. if the source
+				was unpacked manually).
+			--build
+				Compile the ircd (e.g. if configure was
+				run manually).
+			--install
+				Install the ircd (e.g. if make was run
+				manually).
+
+	addport <server>
+	server addport <server>
+		Add a port to a server.
+		Prompts for port number, port type, visibility and
+		optional bind ip.
+		If no ip is specified, the default private/public one
+		is used depending on the port type.
+
+	delport <server> <port> [ip]
+	server delport <server> <port> [ip]
+		Delete the specified port.
+		Prompts for confirmation if ip is not specified and the
+		port exists on multiple ips.
+
+	server addjupe <server> <jupe>
+		Add the specified nick jupe to the specified server.
+
+	server deljupe <server> <jupe>
+		Remove the specified nick jupe from the specified server.
+
+	server addwebirc <server> <webirc-name>
+		Add the specified webirc authorization to the specified
+		server.
+
+	server delwebirc <server> <webirc-name>
+		Remove the specified webirc authorization from the
+		specified server.
 
 
 SERVICE MANAGEMENT
@@ -394,3 +472,12 @@ MISC
 	quit
 		Quit the application.
 
+
+COPYING
+       Copyright 2010 Adrian Mönnich
+       This is PROPRIETARY, UNPUBLISHED software.
+
+       It may only be used for the GameSurge IRC network.
+       If you are reading this and not in the GameSurge NetOps team,
+       please PM ThiefMaster on GameSurge and tell him from where you
+       got it.
