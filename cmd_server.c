@@ -1020,7 +1020,8 @@ CMD_FUNC(exec)
 {
 	struct ssh_session *session;
 	struct server_info *server;
-	char *cmd;
+	char *cmd_line_dup;
+	char *tmp[3];
 	int ret;
 
 	if(argc < 3)
@@ -1029,22 +1030,30 @@ CMD_FUNC(exec)
 		return;
 	}
 
+	cmd_line_dup = strdup(cmd_line);
+	if(tokenize(cmd_line_dup, tmp, 3, ' ', 0) != 3)
+	{
+		error("No command given");
+		free(cmd_line_dup);
+		return;
+	}
+
 	if(!(server = serverinfo_load(argv[1])))
 	{
 		error("A server named `%s' does not exist", argv[1]);
+		free(cmd_line_dup);
 		return;
 	}
 
 	if(!(session = ssh_open(server)))
 	{
 		serverinfo_free(server);
+		free(cmd_line_dup);
 		return;
 	}
 
-	// TODO: re-tokenize raw line with limited field count
-	cmd = untokenize(argc - 2, argv + 2, " ");
-	ssh_exec_live(session, cmd);
-	free(cmd);
+	ssh_exec_live(session, tmp[2]);
+	free(cmd_line_dup);
 
 	ssh_close(session);
 	serverinfo_free(server);
