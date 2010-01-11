@@ -35,6 +35,31 @@ FILES
 		See gsconf.cfg.example.
 
 
+COMMON TASKS
+	Push changes to the servers
+		Run 'commit'.
+		If you want to ensure the generated configs are compared
+		with the remote ones instead of the local ones (from the
+		last commit), use 'commit --check-remote'.
+
+	Create a server
+		Run 'addserver' and 'install <server>' and follow the
+		steps displayed.
+
+	Set the primary hub for a server
+		Run 'autoconnect <server> <hub> on'.
+		This will automatically disable autoconnect for all
+		other hubs the server is linked to.
+
+	Add a hostmask to an oper
+		Run 'modoper <name> --addmask <mask>'
+
+	Check if server configs have been changed manually.
+		Run 'checkconf'.
+		This will compare all remote configs against the ones
+		cached during the last commit.
+
+
 CONFIG MANAGEMENT
 	commit [args] [server]
 	quicksync [args] [server]

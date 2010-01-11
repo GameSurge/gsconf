@@ -660,6 +660,7 @@ install:
 	}
 
 	out_color(COLOR_LIME, "ircd installed successfully; use `commit' to install the config and `exec %s ~/ircu/bin/ircd' to start it", server->name);
+	out_color(COLOR_LIME, "Note that you probably want to add a link with `addlink' before commiting the configs or starting the ircd");
 
 out:
 	ssh_close(session);
