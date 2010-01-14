@@ -6,6 +6,7 @@
 #include "configs.h"
 #include "ssh.h"
 #include "input.h"
+#include "conf.h"
 
 static char *conf_sync_arg_generator(const char *text, int state);
 CMD_FUNC(conf_get);
@@ -120,10 +121,17 @@ CMD_FUNC(conf_put)
 	out_color(COLOR_LIME, "Config uploaded successfully");
 	if(readline_yesno("Do you want to rehash the server?", "Yes"))
 	{
-		if(ssh_file_exists(session, "ircu/lib/ircd.pid"))
-			rehash_manually = ssh_exec_live(session, "kill -HUP `cat ~/ircu/lib/ircd.pid`");
+		char *ircd_path, buf[PATH_MAX];
+		if(!(ircd_path = conf_str("ircd_path")))
+			ircd_path = "ircu";
+		snprintf(buf, sizeof(buf), "%s/lib/ircd.pid", ircd_path);
+		if(ssh_file_exists(session, buf))
+		{
+			snprintf(buf, sizeof(buf), "kill -HUP `cat ~/%s/lib/ircd.pid`", ircd_path);
+			rehash_manually = ssh_exec_live(session, buf);
+		}
 		else
-			error("ircu/lib/ircd.pid not found");
+			error("%s/lib/ircd.pid not found", ircd_path);
 	}
 
 	if(rehash_manually)
@@ -137,6 +145,7 @@ CMD_FUNC(conf_rehash)
 {
 	struct server_info *server;
 	struct ssh_session *session;
+	char *ircd_path, pidfile[PATH_MAX], cmd[PATH_MAX];
 
 	if(argc < 2)
 	{
@@ -157,9 +166,14 @@ CMD_FUNC(conf_rehash)
 		return;
 	}
 
-	if(!ssh_file_exists(session, "ircu/lib/ircd.pid"))
-		error("Could not rehash `%s': ircu/lib/ircd.pid not found", server->name);
-	else if(ssh_exec_live(session, "kill -HUP `cat ~/ircu/lib/ircd.pid`") != 0)
+	if(!(ircd_path = conf_str("ircd_path")))
+		ircd_path = "ircu";
+	snprintf(pidfile, sizeof(pidfile), "%s/lib/ircd.pid", ircd_path);
+	snprintf(cmd, sizeof(cmd), "kill -HUP `cat ~/%s/lib/ircd.pid`", ircd_path);
+
+	if(!ssh_file_exists(session, pidfile))
+		error("Could not rehash `%s': %s/lib/ircd.pid not found", server->name, ircd_path);
+	else if(ssh_exec_live(session, cmd) != 0)
 		error("Could not rehash `%s'", server->name);
 	else
 		out_color(COLOR_LIME, "Rehashed `%s'", server->name);

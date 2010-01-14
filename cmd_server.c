@@ -525,7 +525,10 @@ CMD_FUNC(server_install)
 	char conf_key[32];
 	char *src_file;
 	char cmd[256];
+	char path[PATH_MAX];
 	const char *cd_src_cmd, *tmp;
+	char *ircd_path;
+	int delete_old_source = 0;
 
 	if(argc < 2)
 	{
@@ -538,6 +541,9 @@ CMD_FUNC(server_install)
 		error("A server named `%s' does not exist", argv[1]);
 		return;
 	}
+
+	if(!(ircd_path = conf_str("ircd_path")))
+		ircd_path = "ircu";
 
 	snprintf(conf_key, sizeof(conf_key), "ircd_src/%s", serverinfo_db_from_type(server));
 	if(!(src_file = conf_str(conf_key)))
@@ -570,6 +576,11 @@ CMD_FUNC(server_install)
 		// Allow jumping to various install steps
 		if(!strcmp(argv[2], "--reinstall"))
 			goto reinstall;
+		else if(!strcmp(argv[2], "--upload"))
+		{
+			delete_old_source = 1;
+			goto upload;
+		}
 		else if(!strcmp(argv[2], "--unpack"))
 			goto unpack;
 		else if(!strcmp(argv[2], "--configure"))
@@ -587,19 +598,20 @@ CMD_FUNC(server_install)
 		}
 	}
 
-	if(ssh_file_exists(session, "ircu"))
+	if(ssh_file_exists(session, ircd_path))
 	{
-		error("ircu directory found. Use `install %s --reinstall' to install anyway", server->name);
+		error("ircu directory found: ~/%s. Use `install %s --reinstall' to install anyway", ircd_path, server->name);
 		goto out;
 	}
 
 reinstall:
 	if(ssh_file_exists(session, basename(src_file)))
 	{
-		error("Source archive found. Use `install %s --unpack' to install anyway", server->name);
+		error("Source archive found. Use `install %s --unpack' to install anyway or --upload to upload the source again", server->name);
 		goto out;
 	}
 
+upload:
 	out_color(COLOR_BROWN, "Uploading ircd to `%s'", server->name);
 	if(ssh_scp_put(session, src_file, basename(src_file)) != 0)
 		goto out;
@@ -607,8 +619,16 @@ reinstall:
 unpack:
 	if(ssh_file_exists(session, "ircu2.10.12"))
 	{
-		error("Unpacked source found. Use `install %s --configure' to install anyway.", server->name);
-		goto out;
+		if(delete_old_source)
+		{
+			out_color(COLOR_BROWN, "Deleting old source: rm -rf ~/ircu2.10.12");
+			ssh_exec_live(session, "rm -rfv ~/ircu2.10.12");
+		}
+		else
+		{
+			error("Unpacked source found. Use `install %s --configure' to install anyway.", server->name);
+			goto out;
+		}
 	}
 
 	if(!(tmp = conf_str("install_cmds/unpack")))
@@ -623,10 +643,12 @@ unpack:
 
 configure:
 	if(!(tmp = conf_str("install_cmds/configure")))
-		tmp = "./configure --prefix=$HOME/ircu";
-	out_color(COLOR_BROWN, "Configuring ircu: %s", tmp);
-	snprintf(cmd, sizeof(cmd), "%s && %s", cd_src_cmd, tmp);
-	if(ssh_exec_live(session, cmd) != 0)
+		tmp = "./configure --prefix=$1";
+	snprintf(path, sizeof(path), "$HOME/%s", ircd_path); // get $HOME/path_from_config
+	expand_num_args(cmd, sizeof(cmd), tmp, 1, path); // expand path in configure command
+	snprintf(path, sizeof(path), "%s && %s", cd_src_cmd, cmd); // build complete command
+	out_color(COLOR_BROWN, "Configuring ircu: %s", path);
+	if(ssh_exec_live(session, path) != 0)
 	{
 		error("Configure failed. Run configure manually, then run `install %s --build'", server->name);
 		goto out;
@@ -648,18 +670,19 @@ install:
 		tmp = "make install";
 	out_color(COLOR_BROWN, "Building ircu: %s", tmp);
 	snprintf(cmd, sizeof(cmd), "%s && %s", cd_src_cmd, tmp);
+	snprintf(path, sizeof(path), "%s/bin/ircd", ircd_path);
 	if(ssh_exec_live(session, cmd) != 0)
 	{
 		error("Make install failed. Run make install manually, then run `putconf %s'", server->name);
 		goto out;
 	}
-	else if(!ssh_file_exists(session, "ircu/bin/ircd"))
+	else if(!ssh_file_exists(session, path))
 	{
-		error("Make install succeeded but ``~/ircu/bin/ircd' does not exist. Fix this manually, then run `commit' to install the config");
+		error("Make install succeeded but ``~/%s/bin/ircd' does not exist. Fix this manually, then run `commit' to install the config", ircd_path);
 		goto out;
 	}
 
-	out_color(COLOR_LIME, "ircd installed successfully; use `commit' to install the config and `exec %s ~/ircu/bin/ircd' to start it", server->name);
+	out_color(COLOR_LIME, "ircd installed successfully; use `commit' to install the config and `exec %s ~/%s/bin/ircd' to start it", server->name, ircd_path);
 	out_color(COLOR_LIME, "Note that you probably want to add a link with `addlink' before commiting the configs or starting the ircd");
 
 out:
@@ -1023,6 +1046,8 @@ CMD_FUNC(exec)
 	char *cmd_line_dup;
 	char *tmp[3];
 	int ret;
+	PGresult *res;
+	int rows;
 
 	if(argc < 3)
 	{
@@ -1038,25 +1063,45 @@ CMD_FUNC(exec)
 		return;
 	}
 
-	if(!(server = serverinfo_load(argv[1])))
+
+	if(strcmp(argv[1], "*")) // server name given
+		res = pgsql_query("SELECT * FROM servers WHERE lower(name) = lower($1)", 1, stringlist_build(argv[1], NULL));
+	else
 	{
-		error("A server named `%s' does not exist", argv[1]);
+		if(!readline_yesno("Really execute this command on all servers?", NULL))
+		{
+			free(cmd_line_dup);
+			return;
+		}
+
+		res = pgsql_query("SELECT * FROM servers ORDER BY name ASC", 1, NULL);
+	}
+	rows = pgsql_num_rows(res);
+	if(!rows)
+	{
+		if(strcmp(argv[1], "*"))
+			error("A server named `%s' does not exist", argv[1]);
 		free(cmd_line_dup);
+		pgsql_free(res);
 		return;
 	}
 
-	if(!(session = ssh_open(server)))
+	for(int i = 0; i < rows; i++)
 	{
+		struct server_info *server = serverinfo_load_pg(res, i);
+		out_color(COLOR_BROWN, "[%s] %s", server->name, tmp[2]);
+		if(!(session = ssh_open(server)))
+		{
+			serverinfo_free(server);
+			continue;
+		}
+
+		ssh_exec_live(session, tmp[2]);
+		ssh_close(session);
 		serverinfo_free(server);
-		free(cmd_line_dup);
-		return;
 	}
-
-	ssh_exec_live(session, tmp[2]);
+	pgsql_free(res);
 	free(cmd_line_dup);
-
-	ssh_close(session);
-	serverinfo_free(server);
 }
 
 // Tab completion stuff

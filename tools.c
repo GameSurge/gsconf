@@ -68,7 +68,8 @@ void out_prefix(char *text, ...)
 
 	va_start(va, text);
 	vsnprintf(output_prefix, sizeof(output_prefix), text, va);
-	strip_colors(output_prefix);
+	if(no_colors)
+		strip_colors(output_prefix);
 	va_end(va);
 }
 

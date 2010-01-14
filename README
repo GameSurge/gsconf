@@ -342,10 +342,11 @@ SERVER MANAGEMENT
 		Display detailed information about a server, including
 		link information, ports, opers, clients, jupes and webirc.
 
-	exec <server> <command>
+	exec <server|*> <command>
 		Execute a shell commands on the specified server.
 		Output is displayed in realtime.
-
+		Using '*' as the server name will execute the command
+		on all servers and will prompt for confirmation.
 	addserver
 	server add
 		Create a new server.
@@ -385,6 +386,11 @@ SERVER MANAGEMENT
 		if a step fails:
 			--reinstall
 				Skip the check if ~/ircu exists.
+			--upload
+				Upload the source archive even if it alraedy
+				exists.
+				Note: Using this switch forces deletion of
+				the existing source folder.
 			--unpack
 				Skip the check if the ircu source archive
 				exists.

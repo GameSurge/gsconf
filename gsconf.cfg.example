@@ -42,11 +42,14 @@
 	"temp" = "configs/$1.conf.tmp";
 };
 
+// directory where ircu is/will be installed
+"ircd_path" = "ircu";
+
 // commands to install ircu
 "install_cmds" = {
 	"cd_src" = "cd ~/ircu2.10.12";
 	"unpack" = "tar xvf $1";
-	"configure" = "./configure --prefix=$HOME/ircu";
+	"configure" = "./configure --prefix=$1";
 	"make" = "make";
 	"install" = "make install";
 };

@@ -71,6 +71,7 @@ int config_download(struct server_info *server, struct ssh_session *session)
 {
 	int close_session = 0;
 	const char *filename;
+	char *ircd_path, path[PATH_MAX];
 
 	if(!session)
 	{
@@ -79,9 +80,13 @@ int config_download(struct server_info *server, struct ssh_session *session)
 			return 1;
 	}
 
-	if(!ssh_file_exists(session, "ircu/lib/"))
+	if(!(ircd_path = conf_str("ircd_path")))
+		ircd_path = "ircu";
+	snprintf(path, sizeof(path), "%s/lib/", ircd_path);
+
+	if(!ssh_file_exists(session, path))
 	{
-		error("ircu doesn't seem to be installed on `%s': ~/ircu/lib/ doesn't exist", server->name);
+		error("ircu doesn't seem to be installed on `%s': ~/%s/lib/ doesn't exist", server->name, ircd_path);
 		if(close_session)
 			ssh_close(session);
 		return 1;
@@ -89,7 +94,8 @@ int config_download(struct server_info *server, struct ssh_session *session)
 
 	filename = config_filename(server, CONFIG_REMOTE);
 	debug("Downloading config from `%s' to `%s'", server->name, filename);
-	if(ssh_scp_get(session, "ircu/lib/ircd.conf", filename) != 0)
+	snprintf(path, sizeof(path), "%s/lib/ircd.conf", ircd_path);
+	if(ssh_scp_get(session, path, filename) != 0)
 	{
 		if(close_session)
 			ssh_close(session);
@@ -104,6 +110,7 @@ int config_download(struct server_info *server, struct ssh_session *session)
 int config_upload(struct server_info *server, struct ssh_session *session, enum config_type type)
 {
 	int close_session = 0;
+	char *ircd_path, path[PATH_MAX];
 
 	if(!session)
 	{
@@ -112,16 +119,21 @@ int config_upload(struct server_info *server, struct ssh_session *session, enum 
 			return 1;
 	}
 
-	if(!ssh_file_exists(session, "ircu/lib/"))
+	if(!(ircd_path = conf_str("ircd_path")))
+		ircd_path = "ircu";
+	snprintf(path, sizeof(path), "%s/lib/", ircd_path);
+
+	if(!ssh_file_exists(session, path))
 	{
-		error("ircu doesn't seem to be installed on `%s': ~/ircu/lib/ doesn't exist", server->name);
+		error("ircu doesn't seem to be installed on `%s': ~/%s/lib/ doesn't exist", server->name, ircd_path);
 		if(close_session)
 			ssh_close(session);
 		return 1;
 	}
 
 	debug("Uploading config to `%s'", server->name);
-	if(ssh_scp_put(session, config_filename(server, type), "ircu/lib/ircd.conf") != 0)
+	snprintf(path, sizeof(path), "%s/lib/ircd.conf", ircd_path);
+	if(ssh_scp_put(session, config_filename(server, type), path) != 0)
 	{
 		if(close_session)
 			ssh_close(session);
@@ -290,10 +302,17 @@ void config_check_local(const char *server, int check_remote, int auto_update, i
 
 					if(auto_rehash || readline_yesno("Rehash the ircd?", "Yes"))
 					{
-						if(ssh_file_exists(session, "ircu/lib/ircd.pid"))
-							rehash_manually = ssh_exec_live(session, "kill -HUP `cat ~/ircu/lib/ircd.pid`");
+						char *ircd_path, buf[PATH_MAX];
+						if(!(ircd_path = conf_str("ircd_path")))
+							ircd_path = "ircu";
+						snprintf(buf, sizeof(buf), "%s/lib/ircd.pid", ircd_path);
+						if(ssh_file_exists(session, buf))
+						{
+							snprintf(buf, sizeof(buf), "kill -HUP `cat ~/%s/lib/ircd.pid`", ircd_path);
+							rehash_manually = ssh_exec_live(session, buf);
+						}
 						else
-							error("ircu/lib/ircd.pid not found");
+							error("%s/lib/ircd.pid not found", ircd_path);
 					}
 
 					// Rehash failed or not rehashed
