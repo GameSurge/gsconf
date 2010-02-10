@@ -547,7 +547,7 @@ CMD_FUNC(server_install)
 	char path[PATH_MAX];
 	const char *cd_src_cmd, *tmp;
 	char *ircd_path;
-	int delete_old_source = 0;
+	int delete_old_source = 0, no_install = 0;
 
 	if(argc < 2)
 	{
@@ -608,6 +608,8 @@ CMD_FUNC(server_install)
 			goto build;
 		else if(!strcmp(argv[2], "--install"))
 			goto install;
+		else if(!strcmp(argv[2], "--no-install") || !strcmp(argv[2], "--build-only"))
+			no_install = 1;
 		else
 		{
 			error("Invalid action: `%s'", argv[2]);
@@ -681,6 +683,12 @@ build:
 	if(ssh_exec_live(session, cmd) != 0 || !readline_yesno("Did `make' succeed?", "Yes"))
 	{
 		error("Make failed. Run make manually, then run `install %s --install'", server->name);
+		goto out;
+	}
+
+	if(no_install)
+	{
+		out_color(COLOR_LIME, "ircd compiled successfully; use `install %s --install' to install it", server->name);
 		goto out;
 	}
 

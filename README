@@ -403,6 +403,9 @@ SERVER MANAGEMENT
 			--install
 				Install the ircd (e.g. if make was run
 				manually).
+			--no-install
+			--build-only
+				Stop before executing the 'make install' step.
 
 	addport <server>
 	server addport <server>
