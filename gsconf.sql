@@ -84,6 +84,55 @@ END$$
 ALTER FUNCTION public.server_private_ip(server character varying, hub character varying, want_hub boolean) OWNER TO gsdev;
 
 --
+-- Name: service_private_ip(character varying, character varying, boolean); Type: FUNCTION; Schema: public; Owner: gsdev
+--
+
+CREATE FUNCTION service_private_ip(service character varying, hub character varying, want_hub boolean) RETURNS inet
+    AS $$DECLARE
+service_ip inet;
+service_ip_local inet;
+hub_ip inet;
+hub_ip_local inet;
+use_local boolean;
+BEGIN
+use_local := true;
+-- Fetch service ips
+SELECT ip, ip_local
+INTO STRICT service_ip, service_ip_local
+FROM services WHERE name = service;
+-- Fetch hub ips
+SELECT irc_ip_priv, irc_ip_priv_local
+INTO STRICT hub_ip, hub_ip_local
+FROM servers WHERE name = hub;
+
+-- If one of the servers doesn't has a local IP set, use the regular ip
+IF(service_ip_local ISNULL OR hub_ip_local ISNULL) THEN
+  use_local := false;
+-- If the local IPs aren't in the same subnet, use the regular ip
+ELSIF(network(service_ip_local) != network(hub_ip_local)) THEN
+  use_local := false;
+END IF;
+
+IF(use_local) THEN
+  IF(want_hub) THEN
+    RETURN host(hub_ip_local);
+  ELSE
+    RETURN host(service_ip_local);
+  END IF;
+ELSE
+  IF(want_hub) THEN
+    RETURN host(hub_ip);
+  ELSE
+    RETURN host(service_ip);
+  END IF;
+END IF;
+END$$
+    LANGUAGE plpgsql STABLE;
+
+
+ALTER FUNCTION public.service_private_ip(service character varying, hub character varying, want_hub boolean) OWNER TO gsdev;
+
+--
 -- Name: valid_for_type(character varying, character varying); Type: FUNCTION; Schema: public; Owner: gsdev
 --
 
@@ -435,9 +484,11 @@ ALTER TABLE public.servicelinks OWNER TO gsdev;
 CREATE TABLE services (
     name character varying(63) NOT NULL,
     ip inet NOT NULL,
+    ip_local inet,
     link_pass character varying(64) NOT NULL,
     flag_hub boolean DEFAULT true NOT NULL,
-    flag_uworld boolean DEFAULT true NOT NULL
+    flag_uworld boolean DEFAULT true NOT NULL,
+    "numeric" integer NOT NULL
 );
 
 

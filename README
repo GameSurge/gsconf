@@ -441,7 +441,8 @@ SERVICE MANAGEMENT
 	addservice
 	service add
 		Create a new service.
-		Prompts for name, ip, link pass, hub flag and uworld flag.
+		Prompts for name, numeric, ip, link pass, hub flag and
+		uworld flag.
 
 	delservice <name>
 	service del <name>
@@ -450,7 +451,7 @@ SERVICE MANAGEMENT
 	editservice <name>
 	service edit <name>
 		Edit the specified service.
-		Prompts for ip, link pass, hub flag and uworld flag.
+		Prompts for numeric, ip, link pass, hub flag and uworld flag.
 
 
 WEBIRC MANAGEMENT

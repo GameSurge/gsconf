@@ -244,18 +244,37 @@ CMD_FUNC(server_list)
 	PGresult *res;
 	int rows;
 
-	res = pgsql_query("SELECT name, type, numeric, contact FROM servers ORDER BY name ASC", 1, NULL);
+	res = pgsql_query("SELECT	s.name,\
+					s.type,\
+					s.numeric,\
+					s.contact,\
+					COUNT(l.server) AS uplinks\
+			   FROM		servers s\
+			   LEFT JOIN	links l ON (l.server = s.name)\
+			   GROUP BY	s.name, s.type, s.numeric, s.contact\
+			   ORDER BY	s.name ASC",
+			  1, NULL);
 	rows = pgsql_num_rows(res);
 
-	table = table_create(4, rows);
-	table_set_header(table, "Name", "Type", "Numeric", "Contact");
+	table = table_create(5, rows);
+	table_free_column(table, 4, 1);
+	table_set_header(table, "Name", "Type", "Numeric", "Contact", "Uplinks");
 
 	for(int i = 0; i < rows; i++)
 	{
+		char buf[32];
+		int uplinks = atoi(pgsql_nvalue(res, i, "uplinks"));
 		table_col_str(table, i, 0, (char *)pgsql_nvalue(res, i, "name"));
 		table_col_str(table, i, 1, (char *)pgsql_nvalue(res, i, "type"));
 		table_col_str(table, i, 2, (char *)pgsql_nvalue(res, i, "numeric"));
 		table_col_str(table, i, 3, (char *)pgsql_nvalue(res, i, "contact"));
+		if(uplinks == 0)
+			snprintf(buf, sizeof(buf), "\033[" COLOR_LIGHT_RED "m%u\033[0m", uplinks);
+		else if(uplinks == 1)
+			snprintf(buf, sizeof(buf), "\033[" COLOR_YELLOW "m%u\033[0m", uplinks);
+		else
+			snprintf(buf, sizeof(buf), "%u", uplinks);
+		table_col_str(table, i, 4, strdup(buf));
 	}
 
 	table_send(table);

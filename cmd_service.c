@@ -49,16 +49,18 @@ CMD_FUNC(service_list)
 	res = pgsql_query("SELECT * FROM services ORDER BY name ASC", 1, NULL);
 	rows = pgsql_num_rows(res);
 
-	table = table_create(5, rows);
-	table_set_header(table, "Name", "IP", "Link Pass", "Hub", "UWorld");
+	table = table_create(7, rows);
+	table_set_header(table, "Name", "Numeric", "IP", "Local IP", "Link Pass", "Hub", "UWorld");
 
 	for(int i = 0; i < rows; i++)
 	{
 		table_col_str(table, i, 0, (char *)pgsql_nvalue(res, i, "name"));
-		table_col_str(table, i, 1, (char *)pgsql_nvalue(res, i, "ip"));
-		table_col_str(table, i, 2, (char *)pgsql_nvalue(res, i, "link_pass"));
-		table_col_str(table, i, 3, (!strcasecmp(pgsql_nvalue(res, i, "flag_hub"), "t") ? "Yes" : "No"));
-		table_col_str(table, i, 4, (!strcasecmp(pgsql_nvalue(res, i, "flag_uworld"), "t") ? "Yes" : "No"));
+		table_col_str(table, i, 1, (char *)pgsql_nvalue(res, i, "numeric"));
+		table_col_str(table, i, 2, (char *)pgsql_nvalue(res, i, "ip"));
+		table_col_str(table, i, 3, (char *)pgsql_nvalue(res, i, "ip_local"));
+		table_col_str(table, i, 4, (char *)pgsql_nvalue(res, i, "link_pass"));
+		table_col_str(table, i, 5, (!strcasecmp(pgsql_nvalue(res, i, "flag_hub"), "t") ? "Yes" : "No"));
+		table_col_str(table, i, 6, (!strcasecmp(pgsql_nvalue(res, i, "flag_uworld"), "t") ? "Yes" : "No"));
 	}
 
 	table_send(table);
@@ -69,9 +71,9 @@ CMD_FUNC(service_list)
 CMD_FUNC(service_add)
 {
 	const char *line;
-	char *name, *ip, *link_pass;
+	char *name, *numeric, *ip, *ip_local, *link_pass;
 	int flag_hub, flag_uworld;
-	name = ip = link_pass = NULL;
+	name = numeric = ip = ip_local = link_pass = NULL;
 
 	// Prompt service name
 	while(1)
@@ -97,6 +99,41 @@ CMD_FUNC(service_add)
 		break;
 	}
 
+	// Prompt service numeric
+	// Note: We don't support numeric 0. That makes checking stuff much easier.
+	while(1)
+	{
+		line = readline_noac("Service numeric", pgsql_query_str("SELECT MAX(numeric) + 1 FROM services", NULL));
+		if(!line)
+			goto out;
+		else if(!*line)
+			continue;
+
+		int val = atoi(line);
+		if(val < 1)
+		{
+			error("Invalid numeric, must be a positive number");
+			continue;
+		}
+
+		char *str = pgsql_query_str("SELECT name FROM servers WHERE numeric = $1", stringlist_build(line, NULL));
+		if(*str)
+		{
+			error("A server with this numeric already exists (%s)", str);
+			continue;
+		}
+
+		str = pgsql_query_str("SELECT name FROM services WHERE numeric = $1", stringlist_build(line, NULL));
+		if(*str)
+		{
+			error("A service with this numeric already exists (%s)", str);
+			continue;
+		}
+
+		asprintf(&numeric, "%u", val);
+		break;
+	}
+
 	// Prompt ip
 	while(1)
 	{
@@ -116,6 +153,35 @@ CMD_FUNC(service_add)
 		break;
 	}
 
+	// Prompt local ip
+	int has_local_ip = readline_yesno("Does this service have a local IP?", "No");
+	if(has_local_ip)
+	{
+		out("Enter the IP in CIDR style. If two servers have local IPs which are in the same subnet, they will be linked via those ips.");
+		while(1)
+		{
+			line = readline_noac("Local IP", NULL);
+			if(!line)
+				goto out;
+			else if(!*line)
+				continue;
+
+			if(!strchr(line, '/') || !pgsql_valid_for_type(line, "inet"))
+			{
+				error("This IP doesn't look like a valid IP mask");
+				continue;
+			}
+
+			ip_local = strdup(line);
+			break;
+		}
+	}
+	else
+	{
+		ip_local = NULL;
+	}
+
+
 	// Prompt link password
 	while(1)
 	{
@@ -133,26 +199,30 @@ CMD_FUNC(service_add)
 	flag_uworld = readline_yesno("Give service UWorld privileges?", "Yes");
 
 	pgsql_query("INSERT INTO services\
-			(name, ip, link_pass, flag_hub, flag_uworld)\
+			(name, numeric, ip, ip_local, link_pass,\
+			 flag_hub, flag_uworld)\
 		     VALUES\
-		     	($1, $2, $3, $4, $5)",
+		     	($1, $2, $3, $4, $5,\
+			 $6, $7)",
 		    0,
-		    stringlist_build(name, ip, link_pass, (flag_hub ? "t" : "f"),
-				     (flag_uworld ? "t" : "f"), NULL));
+		    stringlist_build_n(7, name, numeric, ip, ip_local, link_pass,
+			    		  (flag_hub ? "t" : "f"), (flag_uworld ? "t" : "f")));
 	out("Service `%s' added successfully", name);
 
 out:
 	xfree(name);
+	xfree(numeric);
 	xfree(ip);
+	xfree(ip_local);
 	xfree(link_pass);
 }
 
 CMD_FUNC(service_edit)
 {
 	const char *line;
-	char *name, *ip, *link_pass;
+	char *name, *numeric, *ip, *ip_local, *link_pass;
 	int flag_hub, flag_uworld;
-	name = ip = link_pass = NULL;
+	name = numeric = ip = ip_local = link_pass = NULL;
 	PGresult *res;
 
 	if(argc < 2)
@@ -170,6 +240,41 @@ CMD_FUNC(service_edit)
 
 	name = strdup(pgsql_nvalue(res, 0, "name"));
 	out("Service server name: %s", name);
+
+	// Prompt service numeric
+	// Note: We don't support numeric 0. That makes checking stuff much easier.
+	while(1)
+	{
+		line = readline_noac("Service numeric", pgsql_nvalue(res, 0, "numeric"));
+		if(!line)
+			goto out;
+		else if(!*line)
+			continue;
+
+		int val = atoi(line);
+		if(val < 1)
+		{
+			error("Invalid numeric, must be a positive number");
+			continue;
+		}
+
+		char *str = pgsql_query_str("SELECT name FROM servers WHERE numeric = $1", stringlist_build(line, NULL));
+		if(*str)
+		{
+			error("A server with this numeric already exists (%s)", str);
+			continue;
+		}
+
+		str = pgsql_query_str("SELECT name FROM services WHERE numeric = $1 AND name != $2", stringlist_build(line, name, NULL));
+		if(*str)
+		{
+			error("A service with this numeric already exists (%s)", str);
+			continue;
+		}
+
+		asprintf(&numeric, "%u", val);
+		break;
+	}
 
 	// Prompt ip
 	while(1)
@@ -190,6 +295,34 @@ CMD_FUNC(service_edit)
 		break;
 	}
 
+	// Prompt local ip
+	int has_local_ip = readline_yesno("Does this service have a local IP?", pgsql_nvalue(res, 0, "ip_local") ? "Yes" : "No");
+	if(has_local_ip)
+	{
+		out("Enter the IP in CIDR style. If two servers have local IPs which are in the same subnet, they will be linked via those ips.");
+		while(1)
+		{
+			line = readline_noac("Local IP", pgsql_nvalue(res, 0, "ip_local"));
+			if(!line)
+				goto out;
+			else if(!*line)
+				continue;
+
+			if(!strchr(line, '/') || !pgsql_valid_for_type(line, "inet"))
+			{
+				error("This IP doesn't look like a valid IP mask");
+				continue;
+			}
+
+			ip_local = strdup(line);
+			break;
+		}
+	}
+	else
+	{
+		ip_local = NULL;
+	}
+
 	// Prompt link password
 	while(1)
 	{
@@ -208,19 +341,23 @@ CMD_FUNC(service_edit)
 
 	pgsql_query("UPDATE	services\
 		     SET	ip = $1,\
-				link_pass = $2,\
-				flag_hub = $3,\
-				flag_uworld = $4\
-		     WHERE	name = $5",
+				ip_local = $2,\
+				link_pass = $3,\
+				flag_hub = $4,\
+				flag_uworld = $5,\
+				numeric = $6\
+		     WHERE	name = $7",
 		    0,
-		    stringlist_build(ip, link_pass, (flag_hub ? "t" : "f"),
-				     (flag_uworld ? "t" : "f"), name, NULL));
+		    stringlist_build_n(7, ip, ip_local, link_pass, (flag_hub ? "t" : "f"),
+					  (flag_uworld ? "t" : "f"), numeric, name));
 	out("Service `%s' updated successfully", name);
 
 out:
 	pgsql_free(res);
 	xfree(name);
+	xfree(numeric);
 	xfree(ip);
+	xfree(ip_local);
 	xfree(link_pass);
 }
 

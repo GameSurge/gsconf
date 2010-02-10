@@ -371,9 +371,10 @@ static void config_build_connects(struct server_info *server, FILE *file)
 
 	// Connect blocks for services to connect to this hub
 	res = pgsql_query("SELECT	s.name,\
-					s.ip,\
+					service_private_ip(sl.service, sl.hub, false) AS ip,\
 					s.link_pass,\
-					s.flag_hub\
+					s.flag_hub,\
+					service_private_ip(sl.service, sl.hub, true) AS vhost\
 			   FROM		servicelinks sl\
 			   JOIN		services s ON (s.name = sl.service)\
 			   WHERE	sl.hub = $1",
@@ -396,6 +397,8 @@ static void config_build_connects(struct server_info *server, FILE *file)
 		fprintf(file, "Connect {\n");
 		fprintf(file, "\tname = \"%s\";\n", pgsql_nvalue(res, i, "name"));
 		fprintf(file, "\thost = \"%s\";\n", pgsql_nvalue(res, i, "ip"));
+		if((vhost = pgsql_nvalue(res, i, "vhost")) && strcmp(vhost, server->irc_ip_priv))
+			fprintf(file, "\tvhost = \"%s\";\n", vhost);
 		fprintf(file, "\tpassword = \"%s\";\n", pgsql_nvalue(res, i, "link_pass"));
 		fprintf(file, "\tclass = \"%s\";\n", connclass);
 		fprintf(file, "\tautoconnect = no;\n");

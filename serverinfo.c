@@ -206,6 +206,13 @@ again:
 			continue;
 		}
 
+		str = pgsql_query_str("SELECT name FROM services WHERE numeric = $1", stringlist_build(line, NULL));
+		if(*str)
+		{
+			error("A service with this numeric already exists (%s)", str);
+			continue;
+		}
+
 		xfree(data.numeric);
 		asprintf(&data.numeric, "%u", val);
 		break;
@@ -484,7 +491,7 @@ again:
 	out("%sNumeric:     %s", FIELD_CHANGED(numeric), data.numeric);
 	out("%sLink Pass:   %s", FIELD_CHANGED(link_pass), data.link_pass);
 	out("%sPriv IP:     %s", FIELD_CHANGED(irc_ip_priv), data.irc_ip_priv);
-	out("%sLocal IP:    %s", FIELD_CHANGED(irc_ip_priv_local), data.irc_ip_priv_local);
+	out("%sLocal IP:    %s", FIELD_CHANGED(irc_ip_priv_local), SHOW_OPTIONAL(irc_ip_priv_local));
 	out("%sPub IP:      %s", FIELD_CHANGED(irc_ip_pub), data.irc_ip_pub);
 	out("%sServer Port: %s", FIELD_CHANGED(server_port), data.server_port);
 	out("%sDescr:       %s", FIELD_CHANGED(description), SHOW_OPTIONAL(description));
