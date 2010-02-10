@@ -590,6 +590,19 @@ CMD_FUNC(server_install)
 	if(!(cd_src_cmd = conf_str("install_cmds/cd_src")))
 		cd_src_cmd = "cd ~/ircu2.10.12";
 
+	if(argc > 3)
+	{
+		if(!strcmp(argv[3], "--no-install") || !strcmp(argv[3], "--build-only"))
+			no_install = 1;
+		else
+		{
+			error("Invalid action: `%s'", argv[3]);
+			serverinfo_free(server);
+			ssh_close(session);
+			return;
+		}
+	}
+
 	if(argc > 2)
 	{
 		// Allow jumping to various install steps
@@ -617,16 +630,6 @@ CMD_FUNC(server_install)
 			ssh_close(session);
 			return;
 		}
-	}
-
-	if(argc > 3 && (!strcmp(argv[3], "--no-install") || !strcmp(argv[3], "--build-only")))
-		no_install = 1;
-	else
-	{
-		error("Invalid action: `%s'", argv[3]);
-		serverinfo_free(server);
-		ssh_close(session);
-		return;
 	}
 
 	if(ssh_file_exists(session, ircd_path))
