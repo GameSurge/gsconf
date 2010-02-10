@@ -406,6 +406,8 @@ SERVER MANAGEMENT
 			--no-install
 			--build-only
 				Stop before executing the 'make install' step.
+				This option can also be used AFTER another
+				option.
 
 	addport <server>
 	server addport <server>

@@ -619,6 +619,16 @@ CMD_FUNC(server_install)
 		}
 	}
 
+	if(argc > 3 && (!strcmp(argv[3], "--no-install") || !strcmp(argv[3], "--build-only")))
+		no_install = 1;
+	else
+	{
+		error("Invalid action: `%s'", argv[3]);
+		serverinfo_free(server);
+		ssh_close(session);
+		return;
+	}
+
 	if(ssh_file_exists(session, ircd_path))
 	{
 		error("ircu directory found: ~/%s. Use `install %s --reinstall' to install anyway", ircd_path, server->name);
