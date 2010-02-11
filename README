@@ -76,6 +76,8 @@ CONFIG MANAGEMENT
 				Automatically update without confirmation.
 			--rehash
 				Automatically rehash without confirmation.
+			--no-rehash
+				Never rehash and do not ask for confirmation.
 
 	rehash <server>
 	conf rehash <server>
@@ -108,6 +110,8 @@ CONFIG MANAGEMENT
 				Automatically update without confirmation.
 			--rehash
 				Automatically rehash without confirmation.
+			--no-rehash
+				Never rehash and do not ask for confirmation.
 
 	getconf <server>
 		Download the config from the specified server and save

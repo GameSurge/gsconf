@@ -203,6 +203,8 @@ CMD_FUNC(conf_sync)
 			auto_update = 1;
 		else if(!strcmp(argv[i], "--rehash"))
 			auto_rehash = 1;
+		else if(!strcmp(argv[i], "--no-rehash"))
+			auto_rehash = -1;
 		else if(!server)
 			server = argv[i];
 	}
@@ -231,6 +233,8 @@ CMD_FUNC(conf_quicksync)
 			auto_update = 1;
 		else if(!strcmp(argv[i], "--rehash"))
 			auto_rehash = 1;
+		else if(!strcmp(argv[i], "--no-rehash"))
+			auto_rehash = -1;
 		else if(!server)
 			server = argv[i];
 	}
@@ -288,7 +292,7 @@ CMD_TAB_FUNC(conf_quicksync)
 
 static char *conf_sync_arg_generator(const char *text, int state)
 {
-	static const char *values[] = { "--check-remote", "--update", "--rehash", NULL };
+	static const char *values[] = { "--check-remote", "--update", "--rehash", "--no-rehash", NULL };
 	static int idx, chain_state;
 	static size_t len;
 	const char *val;

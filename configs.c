@@ -300,7 +300,7 @@ void config_check_local(const char *server, int check_remote, int auto_update, i
 					if(rename(config_filename(server, CONFIG_NEW), config_filename(server, CONFIG_LIVE)) != 0)
 						error("Could not rename new config file: %s (%d)", strerror(errno), errno);
 
-					if(auto_rehash || readline_yesno("Rehash the ircd?", "Yes"))
+					if(auto_rehash != -1 && (auto_rehash == 1 || readline_yesno("Rehash the ircd?", "Yes")))
 					{
 						char *ircd_path, buf[PATH_MAX];
 						if(!(ircd_path = conf_str("ircd_path")))
