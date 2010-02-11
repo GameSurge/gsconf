@@ -153,6 +153,7 @@ static void config_build_classes_clients(struct server_info *server, FILE *file)
 		IRCD_PRIV(die);
 		IRCD_PRIV(restart);
 		IRCD_PRIV(chan_limit);
+		IRCD_PRIV(notargetlimit);
 		if(server->type == SERVER_STAFF || server->type == SERVER_BOTS)
 		{
 			IRCD_PRIV(umode_nochan);
@@ -261,6 +262,7 @@ static void config_build_operators(struct server_info *server, FILE *file)
 		IRCD_PRIV(local);
 		IRCD_PRIV(die);
 		IRCD_PRIV(restart);
+		IRCD_PRIV(notargetlimit);
 		if(server->type == SERVER_STAFF || server->type == SERVER_BOTS)
 		{
 			IRCD_PRIV(umode_nochan);
