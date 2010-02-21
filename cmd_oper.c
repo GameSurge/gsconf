@@ -91,11 +91,12 @@ CMD_FUNC(oper_list)
 		if(i == 0 || strcmp(pgsql_nvalue(res, i, "name"), pgsql_nvalue(res, i - 1, "name"))) // 1st row
 		{
 			int local, oper_local, class_local;
+			const char *server = pgsql_nvalue(res, i, "server");
 
 			oper_start_row = i;
 			oper_table_row = table_row;
 			serverlist->len = 0;
-			stringbuffer_append_string(serverlist, pgsql_nvalue(res, i, "server"));
+			stringbuffer_append_string(serverlist, server ? server : "");
 
 			oper_local = atoi(pgsql_nvalue(res, i, "oper_local"));
 			class_local = atoi(pgsql_nvalue(res, i, "class_local"));
