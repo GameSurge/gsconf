@@ -76,7 +76,7 @@ CMD_FUNC(oper_list)
 			   FROM		opers o\
 			   JOIN		connclasses_users c ON (c.name = o.connclass)\
 			   LEFT JOIN	opers2servers o2s ON (o2s.oper = o.name)\
-			   ORDER BY	o.name ASC,\
+			   ORDER BY	lower(o.name) ASC,\
 			   		o2s.server ASC",
 			  1, NULL);
 	rows = pgsql_num_rows(res);
