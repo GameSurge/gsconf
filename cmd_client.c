@@ -116,7 +116,7 @@ CMD_FUNC(client_add)
 		else if(!*line)
 			continue;
 
-		tmp = pgsql_query_str("SELECT name FROM servers WHERE lower(name) = lower($1)'", stringlist_build(line, NULL));
+		tmp = pgsql_query_str("SELECT name FROM servers WHERE lower(name) = lower($1)", stringlist_build(line, NULL));
 		if(!*tmp)
 		{
 			error("A server named `%s' does not exist", line);
