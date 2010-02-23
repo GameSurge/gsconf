@@ -133,7 +133,7 @@ int config_upload(struct server_info *server, struct ssh_session *session, enum 
 
 	debug("Uploading config to `%s'", server->name);
 	snprintf(path, sizeof(path), "%s/lib/ircd.conf", ircd_path);
-	if(ssh_scp_put(session, config_filename(server, type), path) != 0)
+	if(ssh_scp_put(session, config_filename(server, type), path, 0600) != 0)
 	{
 		if(close_session)
 			ssh_close(session);

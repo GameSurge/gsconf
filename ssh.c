@@ -288,7 +288,7 @@ int ssh_scp_get(struct ssh_session *session, const char *remote_file, const char
 	return 0;
 }
 
-int ssh_scp_put(struct ssh_session *session, const char *local_file, const char *remote_file)
+int ssh_scp_put(struct ssh_session *session, const char *local_file, const char *remote_file, int mode)
 {
 	LIBSSH2_CHANNEL *channel;
 	struct stat fileinfo;
@@ -307,7 +307,7 @@ int ssh_scp_put(struct ssh_session *session, const char *local_file, const char 
 		return 1;
 	}
 
-	if(!(channel = libssh2_scp_send(session->session, remote_file, 0600, fileinfo.st_size)))
+	if(!(channel = libssh2_scp_send(session->session, remote_file, mode, fileinfo.st_size)))
 	{
 		error("Could not create scp send channel: %s", ssh_error(session));
 		fclose(infile);

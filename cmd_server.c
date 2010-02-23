@@ -41,6 +41,8 @@ CMD_FUNC(server_webirc_del);
 CMD_TAB_FUNC(server_webirc_del);
 CMD_FUNC(exec);
 CMD_TAB_FUNC(exec);
+CMD_FUNC(putfile);
+CMD_TAB_FUNC(putfile);
 
 static const char *tc_server = NULL;
 static int tc_jupe_add = 0;
@@ -49,6 +51,7 @@ static int tc_webirc_add = 0;
 static struct command commands[] = {
 	CMD_STUB("server", "Server Management"),
 	CMD_TC("exec", exec, "Execute a command on a server"),
+	CMD_TC("putfile", putfile, "Upload a file to a server"),
 	CMD_LIST_END
 };
 
@@ -647,7 +650,7 @@ reinstall:
 
 upload:
 	out_color(COLOR_BROWN, "Uploading ircd to `%s'", server->name);
-	if(ssh_scp_put(session, src_file, basename(src_file)) != 0)
+	if(ssh_scp_put(session, src_file, basename(src_file), 0600) != 0)
 		goto out;
 
 unpack:
@@ -1085,7 +1088,6 @@ CMD_FUNC(exec)
 	struct server_info *server;
 	char *cmd_line_dup;
 	char *tmp[3];
-	int ret;
 	PGresult *res;
 	int rows;
 
@@ -1142,6 +1144,62 @@ CMD_FUNC(exec)
 	}
 	pgsql_free(res);
 	free(cmd_line_dup);
+}
+
+CMD_FUNC(putfile)
+{
+	struct ssh_session *session;
+	struct server_info *server;
+	PGresult *res;
+	int rows;
+	int mode = 0600;
+
+	if(argc < 4)
+	{
+		out("Usage: putfile <server> <source> <dest> [mode]");
+		return;
+	}
+
+	if(!file_exists(argv[2]))
+	{
+		error("File `%s' does not exist", argv[2]);
+		return;
+	}
+
+	if(argc > 4)
+		mode = strtoul(argv[4], NULL, 8);
+
+	out("Using chmod %o", mode);
+
+	if(strcmp(argv[1], "*")) // server name given
+		res = pgsql_query("SELECT * FROM servers WHERE lower(name) = lower($1)", 1, stringlist_build(argv[1], NULL));
+	else
+		res = pgsql_query("SELECT * FROM servers ORDER BY name ASC", 1, NULL);
+
+	rows = pgsql_num_rows(res);
+	if(!rows)
+	{
+		if(strcmp(argv[1], "*"))
+			error("A server named `%s' does not exist", argv[1]);
+		pgsql_free(res);
+		return;
+	}
+
+	for(int i = 0; i < rows; i++)
+	{
+		struct server_info *server = serverinfo_load_pg(res, i);
+		out_color(COLOR_BROWN, "Uploading to %s", server->name);
+		if(!(session = ssh_open(server)))
+		{
+			serverinfo_free(server);
+			continue;
+		}
+
+		ssh_scp_put(session, argv[2], argv[3], mode);
+		ssh_close(session);
+		serverinfo_free(server);
+	}
+	pgsql_free(res);
 }
 
 // Tab completion stuff
@@ -1255,6 +1313,15 @@ CMD_TAB_FUNC(exec)
 {
 	if(CAN_COMPLETE_ARG(1))
 		return server_generator(text, state);
+	return NULL;
+}
+
+CMD_TAB_FUNC(putfile)
+{
+	if(CAN_COMPLETE_ARG(1))
+		return server_generator(text, state);
+	else if(CAN_COMPLETE_ARG(2))
+		return rl_filename_completion_function(text, state);
 	return NULL;
 }
 

@@ -28,7 +28,7 @@ void ssh_set_passphrase(const char *passphrase);
 struct ssh_session *ssh_open(struct server_info *server);
 void ssh_close(struct ssh_session *session);
 int ssh_scp_get(struct ssh_session *session, const char *remote_file, const char *local_file);
-int ssh_scp_put(struct ssh_session *session, const char *local_file, const char *remote_file);
+int ssh_scp_put(struct ssh_session *session, const char *local_file, const char *remote_file, int mode);
 int ssh_exec(struct ssh_session *session, const char *command, char **output);
 struct ssh_exec *ssh_exec_async(struct ssh_session *session, const char *command);
 int ssh_exec_read(struct ssh_exec *exec, const char **output);

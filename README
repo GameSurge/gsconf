@@ -351,6 +351,13 @@ SERVER MANAGEMENT
 		Output is displayed in realtime.
 		Using '*' as the server name will execute the command
 		on all servers and will prompt for confirmation.
+
+	putfile <server|*> <local> <remote> [perms]
+		Upload the specified file to the specified server.
+		Using '*' as the server name will upload the file
+		to all servers.
+		If no perms are given, 0600 will be used.
+
 	addserver
 	server add
 		Create a new server.
