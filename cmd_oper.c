@@ -615,6 +615,24 @@ CMD_FUNC(oper_mod)
 				return;
 			}
 
+			if(!strcmp(argv[i + 1], "*"))
+			{
+				out("Adding all non-hub servers");
+				pgsql_query("INSERT INTO opers2servers (oper, server)\
+						SELECT	$1::varchar, name\
+						FROM 	servers\
+						WHERE	type != 'HUB' AND\
+							name NOT IN (\
+								SELECT	server\
+								FROM	opers2servers\
+								WHERE	oper = $1\
+							)",
+					    0, stringlist_build(name, NULL));
+				i++;
+				modified = 1;
+				continue;
+			}
+
 			server = pgsql_query_str("SELECT name FROM servers WHERE lower(name) = lower($1)", stringlist_build(argv[i + 1], NULL));
 			if(!*server)
 			{
@@ -645,6 +663,15 @@ CMD_FUNC(oper_mod)
 				error("--delserver needs a server argument");
 				pgsql_rollback();
 				return;
+			}
+
+			if(!strcmp(argv[i + 1], "*"))
+			{
+				out("Removing all servers");
+				pgsql_query("DELETE FROM opers2servers WHERE oper = $1", 0, stringlist_build(name, NULL));
+				i++;
+				modified = 1;
+				continue;
 			}
 
 			int cnt = pgsql_query_int("SELECT COUNT(*) FROM opers2servers WHERE oper = $1 AND lower(server) = lower($2)",
