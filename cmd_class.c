@@ -728,7 +728,7 @@ CMD_FUNC(class_mod)
 		}
 		else
 		{
-			error("Unepected argument: %s", argv[i]);
+			error("Unexpected argument: %s", argv[i]);
 			pgsql_rollback();
 			return;
 		}
