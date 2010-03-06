@@ -167,7 +167,7 @@ ALTER TABLE public.clientgroups OWNER TO gsdev;
 CREATE TABLE clients (
     "group" character varying(32) NOT NULL,
     server character varying(63) NOT NULL,
-    id integer NOT NULL,
+    id serial NOT NULL,
     ident character varying(10) DEFAULT '*'::character varying NOT NULL,
     ip inet,
     host character varying(63),
@@ -241,7 +241,7 @@ ALTER TABLE public.features OWNER TO gsdev;
 --
 
 CREATE TABLE forwards (
-    id integer NOT NULL,
+    id serial NOT NULL,
     prefix character varying(1) NOT NULL,
     target character varying(63) NOT NULL,
     server character varying(63)
@@ -343,7 +343,7 @@ ALTER TABLE public.opers2servers OWNER TO gsdev;
 --
 
 CREATE TABLE ports (
-    id integer NOT NULL,
+    id serial NOT NULL,
     server character varying(63) NOT NULL,
     port integer NOT NULL,
     ip inet,
@@ -359,7 +359,7 @@ ALTER TABLE public.ports OWNER TO gsdev;
 --
 
 CREATE TABLE pseudos (
-    id integer NOT NULL,
+    id serial NOT NULL,
     command character varying(16) NOT NULL,
     name character varying(30) NOT NULL,
     target character varying(94) NOT NULL,
