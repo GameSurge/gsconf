@@ -227,7 +227,7 @@ CMD_FUNC(class_info)
 	putc('\n', stdout);
 
 	// Clients
-	res = pgsql_query("SELECT name, server FROM clients WHERE lower(connclass) = lower($1)",
+	res = pgsql_query("SELECT name, server FROM clientgroups WHERE lower(connclass) = lower($1)",
 			  1, stringlist_build(argv[1], NULL));
 
 	out("Clients:");

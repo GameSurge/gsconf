@@ -43,6 +43,13 @@ int pgsql_num_rows(PGresult *res)
 	return PQntuples(res);
 }
 
+int pgsql_num_affected(PGresult *res)
+{
+	const char *str = PQcmdTuples(res);
+	assert(*str);
+	return atoi(str);
+}
+
 const char *pgsql_value(PGresult *res, int row, int col)
 {
 	if(PQgetisnull(res, row, col))

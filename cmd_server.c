@@ -181,14 +181,15 @@ CMD_FUNC(server_info)
 	// Clients
 	if(server->type != SERVER_HUB)
 	{
-		res = pgsql_query("SELECT	name,\
-						connclass,\
-						password,\
-						(ident || '@' || COALESCE(host, '*')) AS hostmask,\
-						(ident || '@' || COALESCE(ip::varchar, '*')) AS ipmask\
-				   FROM		clients\
-				   WHERE	server = $1\
-				   ORDER BY	name ASC",
+		res = pgsql_query("SELECT	cg.name,\
+						cg.connclass,\
+						cg.password,\
+						(cl.ident || '@' || COALESCE(cl.host, '*')) AS hostmask,\
+						(cl.ident || '@' || COALESCE(cl.ip::varchar, '*')) AS ipmask\
+				   FROM		clientgroups cg\
+				   JOIN		clients cl ON (cl.group = cg.name AND cl.server = cg.server)\
+				   WHERE	cg.server = $1\
+				   ORDER BY	cg.name ASC",
 				  1, stringlist_build(server->name, NULL));
 		rows = pgsql_num_rows(res);
 		putc('\n', stdout);
@@ -330,8 +331,10 @@ CMD_FUNC(server_add)
 		if(class)
 		{
 			out("Adding default client authorization: *@* -> %s", class);
-			pgsql_query("INSERT INTO clients (name, server, connclass) VALUES ('Default', $1, $2)",
+			pgsql_query("INSERT INTO clientgroups (name, server, connclass) VALUES ('Default', $1, $2)",
 				    0, stringlist_build(data->name, class, NULL));
+			pgsql_query("INSERT INTO clients (\"group\", server) VALUES ('Default', $1)",
+				    0, stringlist_build(data->name, NULL));
 		}
 	}
 

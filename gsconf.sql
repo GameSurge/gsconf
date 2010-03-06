@@ -15,13 +15,6 @@ SET escape_string_warning = off;
 COMMENT ON SCHEMA public IS 'Standard public schema';
 
 
---
--- Name: plpgsql; Type: PROCEDURAL LANGUAGE; Schema: -; Owner: postgres
---
-
-CREATE PROCEDURAL LANGUAGE plpgsql;
-
-
 SET search_path = public, pg_catalog;
 
 --
@@ -29,7 +22,7 @@ SET search_path = public, pg_catalog;
 --
 
 CREATE DOMAIN ircd_oper_priv_status AS smallint NOT NULL
-	CONSTRAINT ircd_oper_priv_status_check CHECK (((VALUE >= -1) AND (VALUE <= 1)));
+    CONSTRAINT ircd_oper_priv_status_check CHECK (((VALUE >= (-1)) AND (VALUE <= 1)));
 
 
 ALTER DOMAIN public.ircd_oper_priv_status OWNER TO gsdev;
@@ -49,11 +42,11 @@ BEGIN
 use_local := true;
 -- Fetch server ips
 SELECT irc_ip_priv, irc_ip_priv_local
-INTO STRICT server_ip, server_ip_local
+INTO server_ip, server_ip_local
 FROM servers WHERE name = server;
 -- Fetch hub ips
 SELECT irc_ip_priv, irc_ip_priv_local
-INTO STRICT hub_ip, hub_ip_local
+INTO hub_ip, hub_ip_local
 FROM servers WHERE name = hub;
 
 -- If one of the servers doesn't has a local IP set, use the regular ip
@@ -98,11 +91,11 @@ BEGIN
 use_local := true;
 -- Fetch service ips
 SELECT ip, ip_local
-INTO STRICT service_ip, service_ip_local
+INTO service_ip, service_ip_local
 FROM services WHERE name = service;
 -- Fetch hub ips
 SELECT irc_ip_priv, irc_ip_priv_local
-INTO STRICT hub_ip, hub_ip_local
+INTO hub_ip, hub_ip_local
 FROM servers WHERE name = hub;
 
 -- If one of the servers doesn't has a local IP set, use the regular ip
@@ -153,24 +146,38 @@ SET default_tablespace = '';
 SET default_with_oids = false;
 
 --
+-- Name: clientgroups; Type: TABLE; Schema: public; Owner: gsdev; Tablespace:
+--
+
+CREATE TABLE clientgroups (
+    name character varying(32) NOT NULL,
+    server character varying(63) NOT NULL,
+    connclass character varying(32) NOT NULL,
+    "password" character varying(32),
+    class_maxlinks integer
+);
+
+
+ALTER TABLE public.clientgroups OWNER TO gsdev;
+
+--
 -- Name: clients; Type: TABLE; Schema: public; Owner: gsdev; Tablespace:
 --
 
 CREATE TABLE clients (
-    name character varying(32) NOT NULL,
+    "group" character varying(32) NOT NULL,
     server character varying(63) NOT NULL,
-    connclass character varying(32) NOT NULL,
+    id integer NOT NULL,
     ident character varying(10) DEFAULT '*'::character varying NOT NULL,
     ip inet,
     host character varying(63),
-    "password" character varying(32),
-    class_maxlinks integer,
     CONSTRAINT clients_host_check CHECK (((host)::text <> '*'::text)),
     CONSTRAINT clients_ident_check CHECK (((ident)::text <> ''::text))
 );
 
 
 ALTER TABLE public.clients OWNER TO gsdev;
+
 
 --
 -- Name: connclasses_servers; Type: TABLE; Schema: public; Owner: gsdev; Tablespace:
@@ -199,17 +206,17 @@ CREATE TABLE connclasses_users (
     sendq integer DEFAULT 655360 NOT NULL,
     recvq integer DEFAULT 1024 NOT NULL,
     usermode character varying(16),
-    priv_local ircd_oper_priv_status DEFAULT -1 NOT NULL,
-    priv_umode_nochan ircd_oper_priv_status DEFAULT -1 NOT NULL,
-    priv_umode_noidle ircd_oper_priv_status DEFAULT -1 NOT NULL,
-    priv_umode_chserv ircd_oper_priv_status DEFAULT -1 NOT NULL,
-    priv_notargetlimit ircd_oper_priv_status DEFAULT -1 NOT NULL,
-    priv_flood ircd_oper_priv_status DEFAULT -1 NOT NULL,
-    priv_pseudoflood ircd_oper_priv_status DEFAULT -1 NOT NULL,
-    priv_gline_immune ircd_oper_priv_status DEFAULT -1 NOT NULL,
-    priv_die ircd_oper_priv_status DEFAULT -1 NOT NULL,
-    priv_restart ircd_oper_priv_status DEFAULT -1 NOT NULL,
-    priv_chan_limit ircd_oper_priv_status DEFAULT -1 NOT NULL,
+    priv_local ircd_oper_priv_status DEFAULT (-1) NOT NULL,
+    priv_umode_nochan ircd_oper_priv_status DEFAULT (-1) NOT NULL,
+    priv_umode_noidle ircd_oper_priv_status DEFAULT (-1) NOT NULL,
+    priv_umode_chserv ircd_oper_priv_status DEFAULT (-1) NOT NULL,
+    priv_notargetlimit ircd_oper_priv_status DEFAULT (-1) NOT NULL,
+    priv_flood ircd_oper_priv_status DEFAULT (-1) NOT NULL,
+    priv_pseudoflood ircd_oper_priv_status DEFAULT (-1) NOT NULL,
+    priv_gline_immune ircd_oper_priv_status DEFAULT (-1) NOT NULL,
+    priv_die ircd_oper_priv_status DEFAULT (-1) NOT NULL,
+    priv_restart ircd_oper_priv_status DEFAULT (-1) NOT NULL,
+    priv_chan_limit ircd_oper_priv_status DEFAULT (-1) NOT NULL,
     fakehost character varying(63)
 );
 
@@ -242,31 +249,6 @@ CREATE TABLE forwards (
 
 
 ALTER TABLE public.forwards OWNER TO gsdev;
-
---
--- Name: forwards_id_seq; Type: SEQUENCE; Schema: public; Owner: gsdev
---
-
-CREATE SEQUENCE forwards_id_seq
-    INCREMENT BY 1
-    NO MAXVALUE
-    NO MINVALUE
-    CACHE 1;
-
-
-ALTER TABLE public.forwards_id_seq OWNER TO gsdev;
-
---
--- Name: forwards_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: gsdev
---
-
-ALTER SEQUENCE forwards_id_seq OWNED BY forwards.id;
-
-
---
--- Name: forwards_id_seq; Type: SEQUENCE SET; Schema: public; Owner: gsdev
---
-
 
 --
 -- Name: jupes; Type: TABLE; Schema: public; Owner: gsdev; Tablespace:
@@ -329,16 +311,16 @@ CREATE TABLE opers (
     "password" character varying(64) NOT NULL,
     connclass character varying(32) NOT NULL,
     active boolean DEFAULT true NOT NULL,
-    priv_local ircd_oper_priv_status DEFAULT -1 NOT NULL,
-    priv_umode_nochan ircd_oper_priv_status DEFAULT -1 NOT NULL,
-    priv_umode_noidle ircd_oper_priv_status DEFAULT -1 NOT NULL,
-    priv_umode_chserv ircd_oper_priv_status DEFAULT -1 NOT NULL,
-    priv_notargetlimit ircd_oper_priv_status DEFAULT -1 NOT NULL,
-    priv_flood ircd_oper_priv_status DEFAULT -1 NOT NULL,
-    priv_pseudoflood ircd_oper_priv_status DEFAULT -1 NOT NULL,
-    priv_gline_immune ircd_oper_priv_status DEFAULT -1 NOT NULL,
-    priv_die ircd_oper_priv_status DEFAULT -1 NOT NULL,
-    priv_restart ircd_oper_priv_status DEFAULT -1 NOT NULL
+    priv_local ircd_oper_priv_status DEFAULT (-1) NOT NULL,
+    priv_umode_nochan ircd_oper_priv_status DEFAULT (-1) NOT NULL,
+    priv_umode_noidle ircd_oper_priv_status DEFAULT (-1) NOT NULL,
+    priv_umode_chserv ircd_oper_priv_status DEFAULT (-1) NOT NULL,
+    priv_notargetlimit ircd_oper_priv_status DEFAULT (-1) NOT NULL,
+    priv_flood ircd_oper_priv_status DEFAULT (-1) NOT NULL,
+    priv_pseudoflood ircd_oper_priv_status DEFAULT (-1) NOT NULL,
+    priv_gline_immune ircd_oper_priv_status DEFAULT (-1) NOT NULL,
+    priv_die ircd_oper_priv_status DEFAULT (-1) NOT NULL,
+    priv_restart ircd_oper_priv_status DEFAULT (-1) NOT NULL
 );
 
 
@@ -373,31 +355,6 @@ CREATE TABLE ports (
 ALTER TABLE public.ports OWNER TO gsdev;
 
 --
--- Name: ports_id_seq; Type: SEQUENCE; Schema: public; Owner: gsdev
---
-
-CREATE SEQUENCE ports_id_seq
-    INCREMENT BY 1
-    NO MAXVALUE
-    NO MINVALUE
-    CACHE 1;
-
-
-ALTER TABLE public.ports_id_seq OWNER TO gsdev;
-
---
--- Name: ports_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: gsdev
---
-
-ALTER SEQUENCE ports_id_seq OWNED BY ports.id;
-
-
---
--- Name: ports_id_seq; Type: SEQUENCE SET; Schema: public; Owner: gsdev
---
-
-
---
 -- Name: pseudos; Type: TABLE; Schema: public; Owner: gsdev; Tablespace:
 --
 
@@ -412,31 +369,6 @@ CREATE TABLE pseudos (
 
 
 ALTER TABLE public.pseudos OWNER TO gsdev;
-
---
--- Name: pseudos_id_seq; Type: SEQUENCE; Schema: public; Owner: gsdev
---
-
-CREATE SEQUENCE pseudos_id_seq
-    INCREMENT BY 1
-    NO MAXVALUE
-    NO MINVALUE
-    CACHE 1;
-
-
-ALTER TABLE public.pseudos_id_seq OWNER TO gsdev;
-
---
--- Name: pseudos_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: gsdev
---
-
-ALTER SEQUENCE pseudos_id_seq OWNED BY pseudos.id;
-
-
---
--- Name: pseudos_id_seq; Type: SEQUENCE SET; Schema: public; Owner: gsdev
---
-
 
 --
 -- Name: servers; Type: TABLE; Schema: public; Owner: gsdev; Tablespace:
@@ -524,24 +456,9 @@ CREATE TABLE webirc2servers (
 ALTER TABLE public.webirc2servers OWNER TO gsdev;
 
 --
--- Name: id; Type: DEFAULT; Schema: public; Owner: gsdev
+-- Data for Name: clientgroups; Type: TABLE DATA; Schema: public; Owner: gsdev
 --
 
-ALTER TABLE forwards ALTER COLUMN id SET DEFAULT nextval('forwards_id_seq'::regclass);
-
-
---
--- Name: id; Type: DEFAULT; Schema: public; Owner: gsdev
---
-
-ALTER TABLE ports ALTER COLUMN id SET DEFAULT nextval('ports_id_seq'::regclass);
-
-
---
--- Name: id; Type: DEFAULT; Schema: public; Owner: gsdev
---
-
-ALTER TABLE pseudos ALTER COLUMN id SET DEFAULT nextval('pseudos_id_seq'::regclass);
 
 
 --
@@ -549,11 +466,12 @@ ALTER TABLE pseudos ALTER COLUMN id SET DEFAULT nextval('pseudos_id_seq'::regcla
 --
 
 
+
 --
 -- Data for Name: connclasses_servers; Type: TABLE DATA; Schema: public; Owner: gsdev
 --
 
-INSERT INTO connclasses_servers VALUES ('HubToHub', 'HUB', '1 minutes 30 seconds', '5 minutes', 0, 150000000);
+INSERT INTO connclasses_servers VALUES ('HubToHub', 'HUB', '2 minutes 30 seconds', '5 minutes', 1024, 150000000);
 INSERT INTO connclasses_servers VALUES ('HubToLeaf', 'HUB', '1 minutes 30 seconds', '5 minutes', 0, 100000000);
 INSERT INTO connclasses_servers VALUES ('LeafToHub', 'LEAF', '1 minutes 30 seconds', '2 minutes 30 seconds', 1, 100000000);
 INSERT INTO connclasses_servers VALUES ('LeafToHub', 'STAFF', '1 minutes 30 seconds', '2 minutes 30 seconds', 1, 100000000);
@@ -566,6 +484,14 @@ INSERT INTO connclasses_servers VALUES ('HubToService', 'HUB', '1 minutes 30 sec
 --
 
 INSERT INTO connclasses_users VALUES ('Users', '1 minutes 30 seconds', 0, 655360, 1024, 'iw', -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, NULL);
+INSERT INTO connclasses_users VALUES ('TrialServerAdmins', '1 minutes 30 seconds', 0, 6553600, 10240, 'iw', 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, NULL);
+INSERT INTO connclasses_users VALUES ('Opers', '1 minutes 30 seconds', 0, 6553600, 20480, 'iw', 0, -1, -1, -1, -1, -1, -1, -1, 0, 0, -1, NULL);
+INSERT INTO connclasses_users VALUES ('SeniorOpers', '1 minutes 30 seconds', 0, 6553600, 40960, 'iw', 0, -1, -1, -1, -1, 1, -1, -1, 0, 0, -1, NULL);
+INSERT INTO connclasses_users VALUES ('NetOps', '2 minutes 30 seconds', 0, 65536000, 40960, 'iw', 0, -1, -1, 1, -1, 1, -1, -1, 0, 0, -1, NULL);
+INSERT INTO connclasses_users VALUES ('Staff', '1 minutes 30 seconds', 0, 655360, 10240, 'iwx', -1, 1, -1, -1, 1, -1, -1, -1, -1, -1, 1, 'staff.gamesurge');
+INSERT INTO connclasses_users VALUES ('Bots', '1 minutes 30 seconds', 0, 1048576, 1024, 'iw', -1, 1, -1, -1, 1, 1, -1, -1, -1, -1, 1, NULL);
+INSERT INTO connclasses_users VALUES ('Bots-NoIdle', '1 minutes 30 seconds', 0, 1048576, 1024, 'iw', -1, 1, 1, -1, 1, 1, -1, -1, -1, -1, 1, NULL);
+INSERT INTO connclasses_users VALUES ('Bots-ChServ', '1 minutes 30 seconds', 0, 1048576, 1024, 'iw', -1, 1, 1, 1, 1, 1, -1, -1, -1, -1, 1, NULL);
 
 
 --
@@ -578,11 +504,9 @@ INSERT INTO features VALUES ('IPCHECK_CLONE_LIMIT', '400', 'STAFF');
 INSERT INTO features VALUES ('IPCHECK_CLONE_LIMIT', '400', 'BOTS');
 INSERT INTO features VALUES ('IPCHECK_CLONE_PERIOD', '400', 'STAFF');
 INSERT INTO features VALUES ('IPCHECK_CLONE_PERIOD', '400', 'BOTS');
-INSERT INTO features VALUES ('HIS_MAP', 'FALSE', 'STAFF');
 INSERT INTO features VALUES ('RELIABLE_CLOCK', 'FALSE', '*');
 INSERT INTO features VALUES ('BUFFERPOOL', '64000000', '*');
 INSERT INTO features VALUES ('DEFAULT_LIST_PARAM', '>40', '*');
-INSERT INTO features VALUES ('NETWORK', 'GameSurge', '*');
 INSERT INTO features VALUES ('HIDDEN_HOST', 'user.gamesurge', '*');
 INSERT INTO features VALUES ('HIDDEN_IP', '127.0.0.1', '*');
 INSERT INTO features VALUES ('MAXCHANNELSPERUSER', '20', '*');
@@ -602,6 +526,7 @@ INSERT INTO features VALUES ('URLREG', 'http://www.gamesurge.net/createaccount/'
 INSERT INTO features VALUES ('HIS_URLSERVERS', 'http://www.gamesurge.net/servers/', '*');
 INSERT INTO features VALUES ('MAXCHANNELSPERUSER', '40', 'STAFF');
 INSERT INTO features VALUES ('NICKLEN', '30', '*');
+INSERT INTO features VALUES ('NETWORK', 'GameSurge', '*');
 
 
 --
@@ -650,6 +575,7 @@ INSERT INTO jupes VALUES ('OneLetter', 'A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,
 --
 
 
+
 --
 -- Data for Name: pseudos; Type: TABLE DATA; Schema: public; Owner: gsdev
 --
@@ -681,11 +607,19 @@ INSERT INTO jupes VALUES ('OneLetter', 'A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,
 
 
 --
+-- Name: clientgroups_pkey; Type: CONSTRAINT; Schema: public; Owner: gsdev; Tablespace:
+--
+
+ALTER TABLE ONLY clientgroups
+    ADD CONSTRAINT clientgroups_pkey PRIMARY KEY (name, server);
+
+
+--
 -- Name: clients_pkey; Type: CONSTRAINT; Schema: public; Owner: gsdev; Tablespace:
 --
 
 ALTER TABLE ONLY clients
-    ADD CONSTRAINT clients_pkey PRIMARY KEY (name, server);
+    ADD CONSTRAINT clients_pkey PRIMARY KEY (id);
 
 
 --
@@ -841,6 +775,13 @@ ALTER TABLE ONLY webirc
 
 
 --
+-- Name: clients_cgroup_key; Type: INDEX; Schema: public; Owner: gsdev; Tablespace:
+--
+
+CREATE INDEX clients_cgroup_key ON clients USING btree ("group", server);
+
+
+--
 -- Name: connclasses_servers_server_type; Type: INDEX; Schema: public; Owner: gsdev; Tablespace:
 --
 
@@ -911,19 +852,27 @@ CREATE INDEX webirc2servers_server ON webirc2servers USING btree (server);
 
 
 --
--- Name: clients_connclass_fkey; Type: FK CONSTRAINT; Schema: public; Owner: gsdev
+-- Name: clientgroups_connclass_fkey; Type: FK CONSTRAINT; Schema: public; Owner: gsdev
+--
+
+ALTER TABLE ONLY clientgroups
+    ADD CONSTRAINT clientgroups_connclass_fkey FOREIGN KEY (connclass) REFERENCES connclasses_users(name) ON UPDATE CASCADE ON DELETE RESTRICT;
+
+
+--
+-- Name: clientgroups_server_fkey; Type: FK CONSTRAINT; Schema: public; Owner: gsdev
+--
+
+ALTER TABLE ONLY clientgroups
+    ADD CONSTRAINT clientgroups_server_fkey FOREIGN KEY (server) REFERENCES servers(name) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: clients_cgroup_fkey; Type: FK CONSTRAINT; Schema: public; Owner: gsdev
 --
 
 ALTER TABLE ONLY clients
-    ADD CONSTRAINT clients_connclass_fkey FOREIGN KEY (connclass) REFERENCES connclasses_users(name) ON UPDATE CASCADE ON DELETE RESTRICT;
-
-
---
--- Name: clients_server_fkey; Type: FK CONSTRAINT; Schema: public; Owner: gsdev
---
-
-ALTER TABLE ONLY clients
-    ADD CONSTRAINT clients_server_fkey FOREIGN KEY (server) REFERENCES servers(name) ON UPDATE CASCADE ON DELETE CASCADE;
+    ADD CONSTRAINT clients_cgroup_fkey FOREIGN KEY ("group", server) REFERENCES clientgroups(name, server) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -1053,15 +1002,6 @@ ALTER TABLE ONLY webirc2servers
 ALTER TABLE ONLY webirc2servers
     ADD CONSTRAINT webirc2servers_webirc_fkey FOREIGN KEY (webirc) REFERENCES webirc(name) ON UPDATE CASCADE ON DELETE CASCADE;
 
-
---
--- Name: public; Type: ACL; Schema: -; Owner: postgres
---
-
-REVOKE ALL ON SCHEMA public FROM PUBLIC;
-REVOKE ALL ON SCHEMA public FROM postgres;
-GRANT ALL ON SCHEMA public TO postgres;
-GRANT ALL ON SCHEMA public TO PUBLIC;
 
 
 --

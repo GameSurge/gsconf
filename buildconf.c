@@ -101,15 +101,21 @@ static void config_build_classes_clients(struct server_info *server, FILE *file)
 	fprintf(file, "# Client connection classes\n");
 
 	res = pgsql_query("SELECT	CASE\
-						WHEN NOT cl.class_maxlinks ISNULL\
-						THEN (cl.connclass || '::' || cl.name)\
-						ELSE cl.connclass\
+						WHEN NOT cg.class_maxlinks ISNULL\
+						THEN (cg.connclass || '::' || cg.name)\
+						ELSE cg.connclass\
 					END AS class_name,\
 					c.*,\
-					cl.class_maxlinks AS maxlinks_override\
-			   FROM		clients cl\
-			   JOIN		connclasses_users c ON (c.name = cl.connclass)\
-			   WHERE	cl.server = $1\
+					cg.class_maxlinks AS maxlinks_override\
+			   FROM		clientgroups cg\
+			   JOIN		connclasses_users c ON (c.name = cg.connclass)\
+			   WHERE	cg.server = $1 AND\
+			   		EXISTS (\
+						SELECT	*\
+						FROM	clients cl\
+						WHERE	cl.group = cg.name AND\
+							cl.server = cg.server\
+					)\
 			   \
 			   UNION\
 			   \
@@ -178,23 +184,24 @@ static void config_build_clients(struct server_info *server, FILE *file)
 
 	fprintf(file, "# Client authorizations\n");
 
-	res = pgsql_query("SELECT	name,\
-					ident,\
-					ip,\
-					host,\
-					password,\
+	res = pgsql_query("SELECT	cg.name,\
+					cl.ident,\
+					cl.ip,\
+					cl.host,\
+					cg.password,\
 					CASE\
-						WHEN NOT class_maxlinks ISNULL\
-						THEN (connclass || '::' || name)\
-						ELSE connclass\
+						WHEN NOT cg.class_maxlinks ISNULL\
+						THEN (cg.connclass || '::' || cg.name)\
+						ELSE cg.connclass\
 					END AS class_name\
-			   FROM		clients\
-			   WHERE	server = $1\
-			   ORDER BY	(ip ISNULL AND host ISNULL) DESC,\
-					strpos(host, '*') >= 1 DESC,\
-					COALESCE(masklen(ip), 0) ASC,\
-					password = '' DESC,\
-					connclass ASC",
+			   FROM		clientgroups cg\
+			   JOIN		clients cl ON (cl.group = cg.name AND cl.server = cg.server)\
+			   WHERE	cg.server = $1\
+			   ORDER BY	(cl.ip ISNULL AND cl.host ISNULL) DESC,\
+					strpos(cl.host, '*') >= 1 DESC,\
+					COALESCE(masklen(cl.ip), 0) ASC,\
+					cg.password = '' DESC,\
+					cg.connclass ASC",
 			  1, stringlist_build(server->name, NULL));
 	rows = pgsql_num_rows(res);
 

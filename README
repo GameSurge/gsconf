@@ -56,6 +56,15 @@ COMMON TASKS
 	Add a hostmask to an oper
 		Run 'modoper <name> --addmask <mask>'
 
+	Add a new bot server client authorization
+		Run 'addclientgroup' to add the group and the first
+		ident/host/ip combination.
+
+	Add/remove ident/host/ip combinations for a client authorization group
+		Run 'editclients <groupname> <server>'.
+		This will display a list of current combinations and ask
+		you if you want to delete/add combinations.
+
 	Check if server configs have been changed manually.
 		Run 'checkconf'.
 		This will compare all remote configs against the ones
@@ -181,40 +190,36 @@ CLIENT AUTHORIZATION MANAGEMENT
 	client list
 		Display a list of all client authorizations.
 
-	addclient
-	client add
-		Create a new client authorization.
+	addclientgroup
+	client addgroup
+		Create a new client authorization group.
 		Prompts for name, server, connclass, ident, ip, host,
 		password and maxlinks.
 
-	delclass <name> <server>
-	class del <name> <server>
-		Delete the specified client authorization on the
+	delclientgroup <groupname> <server>
+	client delgroup <groupname> <server>
+		Delete the specified client authorization group on the
 		specified server.
 
-	modclient <name> <server> <args...>
-	clientmod <name> <server> <args...>
-	client mod <name> <server> <args...>
+	modclientgroup <groupname> <server> <args...>
+	clientmodgroup <groupname> <server> <args...>
+	client modgroup <groupname> <server> <args...>
 		Modify the specified client authorization.
 		The following arguments are supported:
 			--class connclass
 				Set the connection class.
-			--host host
-				Set the host the client's ip must resolve to.
-				Setting it to '*' will allow all hosts, even
-				if the ip did not resolve at all.
-			--ident ident
-				Set the ident the client must have.
-				Setting it to '*' will allow all idents.
-			--ip ipmask
-				Set the ip (or cidr mask) the client must have.
-				Setting it to '*' will allow all ips.
 			--maxlinks number
 				Set the max. number of clients.
 				Setting it to '*' will use the connclass default.
 			--password
 				Set the password the client must specify.
 				Setting it to '*' will remove the password requirement.
+
+	editclients <groupname> <server>
+	client editclients <groupname> <server>
+		Edit the clients in the specified client authorization group.
+		Allows both deleting and adding of ident/host/ip combinations
+		for the client authorization group.
 
 
 FORWARD MANAGEMENT

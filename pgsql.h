@@ -10,6 +10,7 @@ void pgsql_fini();
 
 void pgsql_free(PGresult *res);
 int pgsql_num_rows(PGresult *res);
+int pgsql_num_affected(PGresult *res);
 const char *pgsql_value(PGresult *res, int row, int col);
 const char *pgsql_nvalue(PGresult *res, int row, const char *col);
 PGresult *pgsql_query(const char *query, int want_result, struct stringlist *params);

@@ -7,16 +7,19 @@
 #include "table.h"
 #include "conf.h"
 
-static char *clientmod_arg_generator(const char *text, int state);
-static char *client_generator(const char *text, int state);
-static char *client_server_generator(const char *text, int state);
+static void show_clientgroup_clients(const char *group, const char *server);
+static char *clientgroupmod_arg_generator(const char *text, int state);
+static char *clientgroup_generator(const char *text, int state);
+static char *clientgroup_server_generator(const char *text, int state);
 CMD_FUNC(client_list);
 CMD_TAB_FUNC(client_list);
-CMD_FUNC(client_add);
-CMD_FUNC(client_del);
-CMD_TAB_FUNC(client_del);
-CMD_FUNC(client_mod);
-CMD_TAB_FUNC(client_mod);
+CMD_FUNC(client_addgroup);
+CMD_FUNC(client_delgroup);
+CMD_TAB_FUNC(client_delgroup);
+CMD_FUNC(client_modgroup);
+CMD_TAB_FUNC(client_modgroup);
+CMD_FUNC(client_editclients);
+CMD_TAB_FUNC(client_editclients);
 
 static struct command commands[] = {
 	CMD_STUB("client", "Client Authorization Management"),
@@ -26,23 +29,25 @@ static struct command commands[] = {
 static struct command subcommands[] = {
 	// "client" subcommands
 	CMD_TC("list", client_list, "Show client authorizations"),
-	CMD("add", client_add, "Add a client authorization"),
-	CMD_TC("del", client_del, "Remove a client authorization"),
-	CMD_TC("mod", client_mod, "Modify a client authorization"),
+	CMD("addgroup", client_addgroup, "Add a client authorization group and a client authorization"),
+	CMD_TC("delgroup", client_delgroup, "Remove a client authorization group"),
+	CMD_TC("modgroup", client_modgroup, "Modify a client authorization group"),
+	CMD_TC("editclients", client_editclients, "Edit the clients in a client authorization group"),
 	CMD_LIST_END
 };
 
-static const char *tc_client = NULL;
+static const char *tc_clientgroup = NULL;
 
 void cmd_client_init()
 {
 	cmd_register_list(commands, NULL);
 	cmd_register_list(subcommands, "client");
 	cmd_alias("clients", "client", "list");
-	cmd_alias("addclient", "client", "add");
-	cmd_alias("delclient", "client", "del");
-	cmd_alias("modclient", "client", "mod");
-	cmd_alias("clientmod", "client", "mod");
+	cmd_alias("addclientgroup", "client", "addgroup");
+	cmd_alias("delclientgroup", "client", "delgroup");
+	cmd_alias("modclientgroup", "client", "modgroup");
+	cmd_alias("clientgroupmod", "client", "modgroup");
+	cmd_alias("editclients", "client", "editclients");
 }
 
 CMD_FUNC(client_list)
@@ -51,33 +56,54 @@ CMD_FUNC(client_list)
 	int rows;
 	struct table *table;
 
-	res = pgsql_query("SELECT	name,\
-					server,\
-					connclass,\
-					password,\
-					ident,\
-					class_maxlinks,\
-					COALESCE(host, '*') AS host,\
-					COALESCE(ip::varchar, '*') AS ip\
-			   FROM		clients\
-			   ORDER BY	server ASC,\
-					name ASC",
+	res = pgsql_query("SELECT	cg.name,\
+					cg.server,\
+					cg.connclass,\
+					cg.password,\
+					cl.ident,\
+					cg.class_maxlinks,\
+					COALESCE(cl.host, '*') AS host,\
+					COALESCE(cl.ip::varchar, '*') AS ip,\
+					(cl.group IS NOT NULL) AS has_clients\
+			   FROM		clientgroups cg\
+			   LEFT JOIN	clients cl ON (cl.group = cg.name AND cl.server = cg.server)\
+			   ORDER BY	cg.server ASC,\
+					cg.name ASC",
 			  1, NULL);
 	rows = pgsql_num_rows(res);
 	table = table_create(8, 0);
+	table->field_len = table_strlen_colors;
+	table_free_column(table, 0, 1);
 	table_set_header(table, "Name", "Server", "Connclass", "Host", "IP", "Ident", "Password", "ClassMax");
 	for(int i = 0, table_row = 0; i < rows; i++)
 	{
+		char buf[128];
+		int has_clients = !strcasecmp(pgsql_nvalue(res, i, "has_clients"), "t");
+
 		// Hack to filter by server without modifying the query
 		if(argc > 1 && strcasecmp(argv[1], pgsql_nvalue(res, i, "server")))
 			continue;
 
-		table_col_str(table, table_row, 0, (char *)pgsql_nvalue(res, i, "name"));
+		if(has_clients)
+			snprintf(buf, sizeof(buf), "%s", pgsql_nvalue(res, i, "name"));
+		else
+			snprintf(buf, sizeof(buf), "\033[" COLOR_LIGHT_RED "m%s\033[0m", pgsql_nvalue(res, i, "name"));
+
+		table_col_str(table, table_row, 0, strdup(buf));
 		table_col_str(table, table_row, 1, (char *)pgsql_nvalue(res, i, "server"));
 		table_col_str(table, table_row, 2, (char *)pgsql_nvalue(res, i, "connclass"));
-		table_col_str(table, table_row, 3, (char *)pgsql_nvalue(res, i, "host"));
-		table_col_str(table, table_row, 4, (char *)pgsql_nvalue(res, i, "ip"));
-		table_col_str(table, table_row, 5, (char *)pgsql_nvalue(res, i, "ident"));
+		if(has_clients)
+		{
+			table_col_str(table, table_row, 3, (char *)pgsql_nvalue(res, i, "host"));
+			table_col_str(table, table_row, 4, (char *)pgsql_nvalue(res, i, "ip"));
+			table_col_str(table, table_row, 5, (char *)pgsql_nvalue(res, i, "ident"));
+		}
+		else
+		{
+			table_col_str(table, table_row, 3, "\033[" COLOR_DARKGRAY "mnone\033[0m");
+			table_col_str(table, table_row, 4, "\033[" COLOR_DARKGRAY "mnone\033[0m");
+			table_col_str(table, table_row, 5, "\033[" COLOR_DARKGRAY "mnone\033[0m");
+		}
 		table_col_str(table, table_row, 6, (char *)pgsql_nvalue(res, i, "password"));
 		table_col_str(table, table_row, 7, (char *)pgsql_nvalue(res, i, "class_maxlinks"));
 		table_row++;
@@ -88,7 +114,7 @@ CMD_FUNC(client_list)
 	pgsql_free(res);
 }
 
-CMD_FUNC(client_add)
+CMD_FUNC(client_addgroup)
 {
 	const char *line;
 	char *tmp;
@@ -123,10 +149,10 @@ CMD_FUNC(client_add)
 			continue;
 		}
 
-		cnt = pgsql_query_int("SELECT COUNT(*) FROM clients WHERE lower(name) = lower($1) AND server = $2", stringlist_build(name, tmp, NULL));
+		cnt = pgsql_query_int("SELECT COUNT(*) FROM clientgroups WHERE lower(name) = lower($1) AND server = $2", stringlist_build(name, tmp, NULL));
 		if(cnt)
 		{
-			error("There is already a client authorization named `%s' on `%s'", name, tmp);
+			error("There is already a client authorization group named `%s' on `%s'", name, tmp);
 			continue;
 		}
 
@@ -233,15 +259,19 @@ CMD_FUNC(client_add)
 		break;
 	}
 
-	pgsql_query("INSERT INTO clients\
-			(name, server, connclass, ident, ip,\
-			 host, password, class_maxlinks)\
+	pgsql_begin();
+	pgsql_query("INSERT INTO clientgroups\
+			(name, server, connclass, password, class_maxlinks)\
 		     VALUES\
-			($1, $2, $3, $4, $5,\
-			 $6, $7, $8)",
-		    0, stringlist_build_n(8, name, server, class, ident, ip,
-					     host, password, class_maxlinks));
-	out("Client authorization `%s' added successfully", name);
+			($1, $2, $3, $4, $5)",
+		    0, stringlist_build_n(5, name, server, class, password, class_maxlinks));
+	pgsql_query("INSERT INTO clients\
+			(\"group\", server, ident, ip, host)\
+		     VALUES\
+			($1, $2, $3, $4, $5)",
+		    0, stringlist_build_n(5, name, server, ident, ip, host));
+	pgsql_commit();
+	out("Client authorization group `%s' added successfully", name);
 	if(class_maxlinks)
 		out("Client will use implicit connection class `%s::%s' with maxlinks=%s", class, name, class_maxlinks);
 
@@ -256,26 +286,26 @@ out:
 	xfree(class_maxlinks);
 }
 
-CMD_FUNC(client_del)
+CMD_FUNC(client_delgroup)
 {
 	if(argc < 3)
 	{
-		out("Usage: delclient <name> <server>");
+		out("Usage: delclientgroup <groupname> <server>");
 		return;
 	}
 
-	int cnt = pgsql_query_int("SELECT COUNT(*) FROM clients WHERE lower(name) = lower($1) AND lower(server) = lower($2)", stringlist_build(argv[1], argv[2], NULL));
+	int cnt = pgsql_query_int("SELECT COUNT(*) FROM clientgroups WHERE lower(name) = lower($1) AND lower(server) = lower($2)", stringlist_build(argv[1], argv[2], NULL));
 	if(!cnt)
 	{
-		error("There is no client authorization named `%s' on `%s'", argv[1], argv[2]);
+		error("There is no client authorization group named `%s' on `%s'", argv[1], argv[2]);
 		return;
 	}
 
-	pgsql_query("DELETE FROM clients WHERE lower(name) = lower($1) AND lower(server) = lower($2)", 0, stringlist_build(argv[1], argv[2], NULL));
-	out("Client authorization `%s' deleted successfully", argv[1]);
+	pgsql_query("DELETE FROM clientgroups WHERE lower(name) = lower($1) AND lower(server) = lower($2)", 0, stringlist_build(argv[1], argv[2], NULL));
+	out("Client authorization group `%s' deleted successfully", argv[1]);
 }
 
-CMD_FUNC(client_mod)
+CMD_FUNC(client_modgroup)
 {
 	char *tmp;
 	char name[32], server[63];
@@ -284,14 +314,14 @@ CMD_FUNC(client_mod)
 
 	if(argc < 4)
 	{
-		out("Usage: modclient <name> <server> <args...>");
+		out("Usage: modclient <groupname> <server> <args...>");
 		return;
 	}
 
-	res = pgsql_query("SELECT name, server FROM clients WHERE lower(name) = lower($1) AND lower(server) = lower($2)", 1, stringlist_build(argv[1], argv[2], NULL));
+	res = pgsql_query("SELECT name, server FROM clientgroups WHERE lower(name) = lower($1) AND lower(server) = lower($2)", 1, stringlist_build(argv[1], argv[2], NULL));
 	if(!pgsql_num_rows(res))
 	{
-		error("A client authorization named `%s' does not exist on `%s'", argv[1], argv[2]);
+		error("A client authorization group named `%s' does not exist on `%s'", argv[1], argv[2]);
 		pgsql_free(res);
 		return;
 	}
@@ -322,78 +352,6 @@ CMD_FUNC(client_mod)
 
 			out("Setting connclass: %s", tmp);
 			pgsql_query("UPDATE clients SET connclass = $1 WHERE name = $2 AND server = $3", 0, stringlist_build(tmp, name, server, NULL));
-			i++;
-			modified = 1;
-		}
-		else if(!strcmp(argv[i], "--ident"))
-		{
-			if(i == argc - 1)
-			{
-				error("--ident needs an argument");
-				pgsql_rollback();
-				return;
-			}
-
-			if(strlen(argv[i + 1]) > 10)
-			{
-				error("Ident length cannot exceed 10 characters");
-				pgsql_rollback();
-				return;
-			}
-
-			tmp = argv[i + 1];
-			if(!*tmp)
-				tmp = "*";
-
-			out("Setting ident: %s", tmp);
-			pgsql_query("UPDATE clients SET ident = $1 WHERE name = $2 AND server = $3", 0, stringlist_build(tmp, name, server, NULL));
-			i++;
-			modified = 1;
-		}
-		else if(!strcmp(argv[i], "--ip"))
-		{
-			if(i == argc - 1)
-			{
-				error("--ip needs an argument");
-				pgsql_rollback();
-				return;
-			}
-
-			if(!strcmp(argv[i + 1], "*") || !strlen(argv[i + 1]))
-				tmp = NULL;
-			else
-			{
-				if(!pgsql_valid_for_type(argv[i + 1], "inet"))
-				{
-					error("This IP doesn't look like a valid IP");
-					pgsql_rollback();
-					return;
-				}
-
-				tmp = argv[i + 1];
-			}
-
-			out("Setting ip: %s", tmp ? tmp : "*");
-			pgsql_query("UPDATE clients SET ip = $1 WHERE name = $2 AND server = $3", 0, stringlist_build_n(3, tmp, name, server));
-			i++;
-			modified = 1;
-		}
-		else if(!strcmp(argv[i], "--host"))
-		{
-			if(i == argc - 1)
-			{
-				error("--host needs an argument");
-				pgsql_rollback();
-				return;
-			}
-
-			if(!strcmp(argv[i + 1], "*") || !strlen(argv[i + 1]))
-				tmp = NULL;
-			else
-				tmp = argv[i + 1];
-
-			out("Setting host: %s", tmp ? tmp : "*");
-			pgsql_query("UPDATE clients SET host = $1 WHERE name = $2 AND server = $3", 0, stringlist_build_n(3, tmp, name, server));
 			i++;
 			modified = 1;
 		}
@@ -455,9 +413,176 @@ CMD_FUNC(client_mod)
 
 	pgsql_commit();
 	if(modified)
-		out_color(COLOR_LIME, "Client authorization was updated successfully");
+		out_color(COLOR_LIME, "Client authorization group was updated successfully");
 	else
 		out_color(COLOR_LIME, "No changes were made");
+}
+
+static void show_clientgroup_clients(const char *group, const char *server)
+{
+	PGresult *res;
+	int rows;
+
+	res = pgsql_query("SELECT	id,\
+					ident,\
+					COALESCE(host, '*') AS host,\
+					COALESCE(ip::varchar, '*') AS ip\
+			   FROM		clients\
+			   WHERE	\"group\" = $1 AND\
+			   		server = $2\
+			   ORDER BY	id ASC",
+			  1, stringlist_build(group, server, NULL));
+	if((rows = pgsql_num_rows(res)))
+	{
+		struct table *table;
+
+		table = table_create(4, pgsql_num_rows(res));
+		table_set_header(table, "ID", "Host", "IP", "Ident");
+		for(int i = 0; i < rows; i++)
+		{
+			table_col_str(table, i, 0, (char *)pgsql_nvalue(res, i, "id"));
+			table_col_str(table, i, 1, (char *)pgsql_nvalue(res, i, "host"));
+			table_col_str(table, i, 2, (char *)pgsql_nvalue(res, i, "ip"));
+			table_col_str(table, i, 3, (char *)pgsql_nvalue(res, i, "ident"));
+		}
+
+		putc('\n', stdout);
+		out("This group contains the following client authorizations:");
+		table_send(table);
+		table_free(table);
+	}
+	pgsql_free(res);
+}
+
+CMD_FUNC(client_editclients)
+{
+	char group[32], server[63];
+	PGresult *res;
+	int rows;
+	const char *line;
+
+	if(argc < 3)
+	{
+		out("Usage: editclients <groupname> <server>");
+		return;
+	}
+
+	res = pgsql_query("SELECT * FROM clientgroups WHERE lower(name) = lower($1) AND lower(server) = lower($2)", 1, stringlist_build(argv[1], argv[2], NULL));
+	if(!pgsql_num_rows(res))
+	{
+		error("A client authorization group named `%s' does not exist on `%s'", argv[1], argv[2]);
+		pgsql_free(res);
+		return;
+	}
+
+	// Show group information
+	out("Name:      %s", pgsql_nvalue(res, 0, "name"));
+	out("Server:    %s", pgsql_nvalue(res, 0, "server"));
+	out("Connclass: %s", pgsql_nvalue(res, 0, "connclass"));
+	out("Password:  %s", pgsql_nvalue(res, 0, "password"));
+	out("ClassMax:  %s", pgsql_nvalue(res, 0, "class_maxlinks"));
+
+	// Copy exact group information so we don't need lower() later
+	strlcpy(group, pgsql_nvalue(res, 0, "name"), sizeof(group));
+	strlcpy(server, pgsql_nvalue(res, 0, "server"), sizeof(server));
+	pgsql_free(res);
+
+	show_clientgroup_clients(group, server);
+	while(1)
+	{
+		putc('\n', stdout);
+		out("To delete a client authorization, enter its ID; to add a new one, press ENTER; to abort, press CTRL+D");
+		line = readline_noac("Delete authorization", "");
+		if(!line)
+			break;
+		else if(*line)
+		{
+			// Delete client authorization
+			res = pgsql_query("DELETE FROM clients WHERE \"group\" = $1 AND server = $2 AND id = $3",
+					  1, stringlist_build(group, server, line, NULL));
+			if(!pgsql_num_affected(res))
+				out("A client authorization with this ID does not exist in this group.");
+			else
+			{
+				out("Client authorization has been deleted successfully.");
+				show_clientgroup_clients(group, server);
+			}
+			pgsql_free(res);
+		}
+		else
+		{
+			// Add a new client authorization
+			out("Adding a new client authorization; to abort, press CTRL+D.");
+			char *ident, *ip, *host;
+			ident = ip = host = NULL;
+
+			// Prompt ident
+			while(1)
+			{
+				line = readline_noac("Ident", "*");
+				if(!line)
+					goto cancel_add;
+				else if(!*line)
+					continue;
+
+				if(strlen(line) > 10)
+				{
+					error("Ident length cannot exceed 10 characters");
+					continue;
+				}
+
+				ident = strdup(line);
+				break;
+			}
+
+			// Prompt ip
+			while(1)
+			{
+				line = readline_noac("IP (CIDR)", "");
+				if(!line)
+					goto cancel_add;
+				else if(!*line || !strcmp(line, "*"))
+				{
+					ip = NULL;
+					break;
+				}
+
+				if(!pgsql_valid_for_type(line, "inet"))
+				{
+					error("This IP doesn't look like a valid IP mask");
+					continue;
+				}
+
+				ip = strdup(line);
+				break;
+			}
+
+			// Prompt host
+			line = readline_noac("Host", "");
+			if(!line)
+				goto cancel_add;
+			else if(!*line || !strcmp(line, "*"))
+				host = NULL;
+			else
+				host = strdup(line);
+
+			pgsql_query("INSERT INTO clients\
+					(\"group\", server, ident, ip, host)\
+				     VALUES\
+					($1, $2, $3, $4, $5)",
+				    0, stringlist_build_n(5, group, server, ident, ip, host));
+			out("Client authorization has been added successfully.");
+			show_clientgroup_clients(group, server);
+
+cancel_add:
+			xfree(ident);
+			xfree(ip);
+			xfree(host);
+		}
+
+		if(!readline_yesno("Continue editing this client authorization?", "No"))
+			break;
+	}
 }
 
 // Tab completion stuff
@@ -468,27 +593,27 @@ CMD_TAB_FUNC(client_list)
 	return NULL;
 }
 
-CMD_TAB_FUNC(client_del)
+CMD_TAB_FUNC(client_delgroup)
 {
 	if(CAN_COMPLETE_ARG(1))
-		return client_generator(text, state);
+		return clientgroup_generator(text, state);
 	else if(CAN_COMPLETE_ARG(2))
 	{
-		tc_client = tc_argv[1];
-		return client_server_generator(text, state);
+		tc_clientgroup = tc_argv[1];
+		return clientgroup_server_generator(text, state);
 	}
 
 	return NULL;
 }
 
-CMD_TAB_FUNC(client_mod)
+CMD_TAB_FUNC(client_modgroup)
 {
 	if(CAN_COMPLETE_ARG(1))
-		return client_generator(text, state);
+		return clientgroup_generator(text, state);
 	else if(CAN_COMPLETE_ARG(2))
 	{
-		tc_client = tc_argv[1];
-		return client_server_generator(text, state);
+		tc_clientgroup = tc_argv[1];
+		return clientgroup_server_generator(text, state);
 	}
 
 	enum {
@@ -504,19 +629,13 @@ CMD_TAB_FUNC(client_mod)
 		arg_type = ARG_NONE;
 		if(!strcmp(tc_argv[i - 1], "--class"))
 			arg_type = ARG_CLASS;
-		else if(!strcmp(tc_argv[i - 1], "--ident"))
-			return NULL;
-		else if(!strcmp(tc_argv[i - 1], "--ip"))
-			return NULL;
-		else if(!strcmp(tc_argv[i - 1], "--host"))
-			return NULL;
 		else if(!strcmp(tc_argv[i - 1], "--password"))
 			return NULL;
 		else if(!strcmp(tc_argv[i - 1], "--maxlinks"))
 			return NULL;
 
 		if(!arg_type)
-			return clientmod_arg_generator(text, state);
+			return clientgroupmod_arg_generator(text, state);
 
 		if(arg_type == ARG_CLASS)
 			return connclass_generator(text, state);
@@ -525,16 +644,26 @@ CMD_TAB_FUNC(client_mod)
 	return NULL;
 }
 
-static char *clientmod_arg_generator(const char *text, int state)
+CMD_TAB_FUNC(client_editclients)
+{
+	if(CAN_COMPLETE_ARG(1))
+		return clientgroup_generator(text, state);
+	else if(CAN_COMPLETE_ARG(2))
+	{
+		tc_clientgroup = tc_argv[1];
+		return clientgroup_server_generator(text, state);
+	}
+
+	return NULL;
+}
+
+static char *clientgroupmod_arg_generator(const char *text, int state)
 {
 	static int idx;
 	static size_t len;
 	const char *val;
 	static const char *values[] = {
 		"--class",
-		"--ident",
-		"--ip",
-		"--host",
 		"--password",
 		"--maxlinks",
 		NULL
@@ -561,7 +690,7 @@ static char *clientmod_arg_generator(const char *text, int state)
   	return NULL;
 }
 
-static char *client_generator(const char *text, int state)
+static char *clientgroup_generator(const char *text, int state)
 {
 	static int row, rows;
 	static size_t len;
@@ -572,7 +701,7 @@ static char *client_generator(const char *text, int state)
 	{
 		row = 0;
 		len = strlen(text);
-		res = pgsql_query("SELECT name FROM clients WHERE name ILIKE $1||'%'", 1, stringlist_build(text, NULL));
+		res = pgsql_query("SELECT name FROM clientgroups WHERE name ILIKE $1||'%'", 1, stringlist_build(text, NULL));
 		rows = pgsql_num_rows(res);
 	}
 	else if(state == -1) // Cleanup
@@ -592,7 +721,7 @@ static char *client_generator(const char *text, int state)
   	return NULL;
 }
 
-static char *client_server_generator(const char *text, int state)
+static char *clientgroup_server_generator(const char *text, int state)
 {
 	static int row, rows;
 	static size_t len;
@@ -601,10 +730,10 @@ static char *client_server_generator(const char *text, int state)
 
 	if(!state) // New word
 	{
-		assert(tc_client);
+		assert(tc_clientgroup);
 		row = 0;
 		len = strlen(text);
-		res = pgsql_query("SELECT server FROM clients WHERE lower(name) = lower($1)", 1, stringlist_build(tc_client, NULL));
+		res = pgsql_query("SELECT server FROM clientgroups WHERE lower(name) = lower($1)", 1, stringlist_build(tc_clientgroup, NULL));
 		rows = pgsql_num_rows(res);
 	}
 	else if(state == -1) // Cleanup
