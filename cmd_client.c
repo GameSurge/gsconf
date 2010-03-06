@@ -74,7 +74,7 @@ CMD_FUNC(client_list)
 	table = table_create(8, 0);
 	table->field_len = table_strlen_colors;
 	table_free_column(table, 0, 1);
-	table_set_header(table, "Name", "Server", "Connclass", "Host", "IP", "Ident", "Password", "ClassMax");
+	table_set_header(table, "Name", "Server", "Connclass", "Password", "ClassMax", "Host", "IP", "Ident");
 	for(int i = 0, table_row = 0; i < rows; i++)
 	{
 		char buf[128];
@@ -92,20 +92,21 @@ CMD_FUNC(client_list)
 		table_col_str(table, table_row, 0, strdup(buf));
 		table_col_str(table, table_row, 1, (char *)pgsql_nvalue(res, i, "server"));
 		table_col_str(table, table_row, 2, (char *)pgsql_nvalue(res, i, "connclass"));
+		table_col_str(table, table_row, 3, (char *)pgsql_nvalue(res, i, "password"));
+		table_col_str(table, table_row, 4, (char *)pgsql_nvalue(res, i, "class_maxlinks"));
+
 		if(has_clients)
 		{
-			table_col_str(table, table_row, 3, (char *)pgsql_nvalue(res, i, "host"));
-			table_col_str(table, table_row, 4, (char *)pgsql_nvalue(res, i, "ip"));
-			table_col_str(table, table_row, 5, (char *)pgsql_nvalue(res, i, "ident"));
+			table_col_str(table, table_row, 5, (char *)pgsql_nvalue(res, i, "host"));
+			table_col_str(table, table_row, 6, (char *)pgsql_nvalue(res, i, "ip"));
+			table_col_str(table, table_row, 7, (char *)pgsql_nvalue(res, i, "ident"));
 		}
 		else
 		{
-			table_col_str(table, table_row, 3, "\033[" COLOR_DARKGRAY "mnone\033[0m");
-			table_col_str(table, table_row, 4, "\033[" COLOR_DARKGRAY "mnone\033[0m");
 			table_col_str(table, table_row, 5, "\033[" COLOR_DARKGRAY "mnone\033[0m");
+			table_col_str(table, table_row, 6, "\033[" COLOR_DARKGRAY "mnone\033[0m");
+			table_col_str(table, table_row, 7, "\033[" COLOR_DARKGRAY "mnone\033[0m");
 		}
-		table_col_str(table, table_row, 6, (char *)pgsql_nvalue(res, i, "password"));
-		table_col_str(table, table_row, 7, (char *)pgsql_nvalue(res, i, "class_maxlinks"));
 		table_row++;
 	}
 
