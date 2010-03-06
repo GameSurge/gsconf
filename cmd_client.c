@@ -351,7 +351,7 @@ CMD_FUNC(client_modgroup)
 			}
 
 			out("Setting connclass: %s", tmp);
-			pgsql_query("UPDATE clients SET connclass = $1 WHERE name = $2 AND server = $3", 0, stringlist_build(tmp, name, server, NULL));
+			pgsql_query("UPDATE clientgroups SET connclass = $1 WHERE name = $2 AND server = $3", 0, stringlist_build(tmp, name, server, NULL));
 			i++;
 			modified = 1;
 		}
@@ -370,7 +370,7 @@ CMD_FUNC(client_modgroup)
 				tmp = argv[i + 1];
 
 			out("Setting password: %s", tmp ? tmp : "\033[" COLOR_DARKGRAY "m(none)\033[0m");
-			pgsql_query("UPDATE clients SET password = $1 WHERE name = $2 AND server = $3", 0, stringlist_build_n(3, tmp, name, server));
+			pgsql_query("UPDATE clientgroups SET password = $1 WHERE name = $2 AND server = $3", 0, stringlist_build_n(3, tmp, name, server));
 			i++;
 			modified = 1;
 		}
@@ -399,7 +399,7 @@ CMD_FUNC(client_modgroup)
 			}
 
 			out("Setting class maxlinks: %s", tmp ? tmp : "\033[" COLOR_DARKGRAY "m(default)\033[0m");
-			pgsql_query("UPDATE clients SET class_maxlinks = $1 WHERE name = $2 AND server = $3", 0, stringlist_build_n(3, tmp, name, server));
+			pgsql_query("UPDATE clientgroups SET class_maxlinks = $1 WHERE name = $2 AND server = $3", 0, stringlist_build_n(3, tmp, name, server));
 			i++;
 			modified = 1;
 		}
