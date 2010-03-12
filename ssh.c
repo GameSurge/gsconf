@@ -12,14 +12,21 @@ static void ssh_waitsocket(struct ssh_session *session);
 static int ssh_sftp(struct ssh_session *session);
 
 static char *last_passphrase = NULL;
+static struct dict *persistent_connections = NULL;
 
 void ssh_init()
 {
-
+	persistent_connections = dict_create();
 }
 
 void ssh_fini()
 {
+	dict_iter(node, persistent_connections)
+	{
+		ssh_close_persistent(node->data);
+	}
+
+	dict_free(persistent_connections);
 	xfree(last_passphrase);
 }
 
@@ -166,6 +173,15 @@ struct ssh_session *ssh_open(struct server_info *server)
 {
 	int sock = 0;
 	struct ssh_session *session;
+	char *name;
+
+	asprintf(&name, "%s@%s:%s", server->ssh_user, server->ssh_host, server->ssh_port);
+	if((session = dict_find(persistent_connections, name)))
+	{
+		free(name);
+		session->refs++;
+		return session;
+	}
 
 	// Create socket
 	if((sock = ssh_socket(server)) < 0)
@@ -173,6 +189,7 @@ struct ssh_session *ssh_open(struct server_info *server)
 
 	session = malloc(sizeof(struct ssh_session));
 	memset(session, 0, sizeof(struct ssh_session));
+	session->name = name;
 	session->fd = sock;
 
 	// Init ssh session
@@ -205,7 +222,42 @@ struct ssh_session *ssh_open(struct server_info *server)
 	}
 
 	// Authenticated successfully
+	session->refs = 1;
 	return session;
+}
+
+void ssh_persist(struct ssh_session *session)
+{
+	if(session->persistent)
+	{
+		debug("SSH session %s is already persistent", session->name);
+		return;
+	}
+
+	session->persistent = 1;
+	session->refs++;
+	debug("SSH session %s is now persistent", session->name);
+	dict_insert(persistent_connections, session->name, session);
+}
+
+void ssh_unpersist(struct ssh_session *session)
+{
+	if(!session->persistent)
+		return;
+
+	session->persistent = 0;
+	session->refs--;
+	dict_delete(persistent_connections, session->name);
+}
+
+void ssh_close_persistent(struct ssh_session *session)
+{
+	debug("Closing persistent ssh connection %s", session->name);
+	assert(session->persistent);
+	assert(session->refs == 1); // one ref is used by the persistent connection itself
+	dict_delete(persistent_connections, session->name);
+	session->persistent = 0;
+	ssh_close(session);
 }
 
 static int ssh_sftp(struct ssh_session *session)
@@ -226,11 +278,18 @@ static int ssh_sftp(struct ssh_session *session)
 
 void ssh_close(struct ssh_session *session)
 {
+	session->refs--;
+
+	if(session->persistent)
+		return;
+
+	assert(session->refs == 0);
 	if(session->sftp)
 		libssh2_sftp_shutdown(session->sftp);
 	libssh2_session_disconnect(session->session, "Finished");
 	libssh2_session_free(session->session);
 	close(session->fd);
+	free(session->name);
 	free(session);
 }
 
@@ -377,6 +436,7 @@ int ssh_exec(struct ssh_session *session, const char *command, char **output)
 	if(!(channel = libssh2_channel_open_session(session->session)))
 	{
 		error("Could not create session channel: %s", ssh_error(session));
+		ssh_unpersist(session);
 		return -1;
 	}
 
@@ -448,6 +508,7 @@ struct ssh_exec *ssh_exec_async(struct ssh_session *session, const char *command
 	if(!(channel = libssh2_channel_open_session(session->session)))
 	{
 		error("Could not create session channel: %s", ssh_error(session));
+		ssh_unpersist(session);
 		return NULL;
 	}
 

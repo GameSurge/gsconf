@@ -43,6 +43,8 @@ CMD_FUNC(exec);
 CMD_TAB_FUNC(exec);
 CMD_FUNC(putfile);
 CMD_TAB_FUNC(putfile);
+CMD_FUNC(connect);
+CMD_TAB_FUNC(connect);
 
 static const char *tc_server = NULL;
 static int tc_jupe_add = 0;
@@ -52,6 +54,7 @@ static struct command commands[] = {
 	CMD_STUB("server", "Server Management"),
 	CMD_TC("exec", exec, "Execute a command on a server"),
 	CMD_TC("putfile", putfile, "Upload a file to a server"),
+	CMD_TC("connect", connect, "Connect via SSH to a server and keep the connection open"),
 	CMD_LIST_END
 };
 
@@ -1205,6 +1208,48 @@ CMD_FUNC(putfile)
 	pgsql_free(res);
 }
 
+CMD_FUNC(connect)
+{
+	struct ssh_session *session;
+	struct server_info *server;
+	PGresult *res;
+	int rows;
+
+	if(argc < 2)
+	{
+		out("Usage: connect <server>");
+		return;
+	}
+
+	if(strcmp(argv[1], "*")) // server name given
+		res = pgsql_query("SELECT * FROM servers WHERE lower(name) = lower($1)", 1, stringlist_build(argv[1], NULL));
+	else
+		res = pgsql_query("SELECT * FROM servers ORDER BY name ASC", 1, NULL);
+	rows = pgsql_num_rows(res);
+	if(!rows)
+	{
+		if(strcmp(argv[1], "*"))
+			error("A server named `%s' does not exist", argv[1]);
+		pgsql_free(res);
+		return;
+	}
+
+	for(int i = 0; i < rows; i++)
+	{
+		struct server_info *server = serverinfo_load_pg(res, i);
+		out_color(COLOR_BROWN, "Opening SSH connection to %s", server->name);
+		if((session = ssh_open(server)))
+		{
+			ssh_persist(session);
+			ssh_close(session);
+		}
+
+		serverinfo_free(server);
+	}
+
+	pgsql_free(res);
+}
+
 // Tab completion stuff
 CMD_TAB_FUNC(server_info)
 {
@@ -1325,6 +1370,13 @@ CMD_TAB_FUNC(putfile)
 		return server_generator(text, state);
 	else if(CAN_COMPLETE_ARG(2))
 		return rl_filename_completion_function(text, state);
+	return NULL;
+}
+
+CMD_TAB_FUNC(connect)
+{
+	if(CAN_COMPLETE_ARG(1))
+		return server_generator(text, state);
 	return NULL;
 }
 

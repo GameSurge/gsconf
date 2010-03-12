@@ -11,6 +11,9 @@ struct ssh_session
 	LIBSSH2_SESSION *session;
 	LIBSSH2_SFTP *sftp;
 	int fd;
+	int refs;
+	int persistent : 1;
+	char *name;
 };
 
 struct ssh_exec
@@ -27,6 +30,8 @@ void ssh_fini();
 void ssh_set_passphrase(const char *passphrase);
 struct ssh_session *ssh_open(struct server_info *server);
 void ssh_close(struct ssh_session *session);
+void ssh_persist(struct ssh_session *session);
+void ssh_close_persistent(struct ssh_session *session);
 int ssh_scp_get(struct ssh_session *session, const char *remote_file, const char *local_file);
 int ssh_scp_put(struct ssh_session *session, const char *local_file, const char *remote_file, int mode);
 int ssh_exec(struct ssh_session *session, const char *command, char **output);

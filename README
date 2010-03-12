@@ -363,6 +363,11 @@ SERVER MANAGEMENT
 		to all servers.
 		If no perms are given, 0600 will be used.
 
+	connect <server|*>
+		Open a persistent ssh connection to the specified server.
+		Using '*' as the server name will upload the file
+		to all servers.
+
 	addserver
 	server add
 		Create a new server.
