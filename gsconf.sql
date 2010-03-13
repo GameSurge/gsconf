@@ -168,7 +168,7 @@ CREATE TABLE clients (
     "group" character varying(32) NOT NULL,
     server character varying(63) NOT NULL,
     id serial NOT NULL,
-    ident character varying(10) DEFAULT '*'::character varying NOT NULL,
+    ident character varying(10) DEFAULT '*'::character varying,
     ip inet,
     host character varying(63),
     CONSTRAINT clients_host_check CHECK (((host)::text <> '*'::text)),

@@ -97,9 +97,13 @@ CMD_FUNC(client_list)
 
 		if(has_clients)
 		{
+			const char *tmp = pgsql_nvalue(res, i, "ident");
 			table_col_str(table, table_row, 5, (char *)pgsql_nvalue(res, i, "host"));
 			table_col_str(table, table_row, 6, (char *)pgsql_nvalue(res, i, "ip"));
-			table_col_str(table, table_row, 7, (char *)pgsql_nvalue(res, i, "ident"));
+			if(tmp)
+				table_col_str(table, table_row, 7, (char *)tmp);
+			else
+				table_col_str(table, table_row, 7, "\033[" COLOR_DARKGRAY "mn/a\033[0m");
 		}
 		else
 		{
@@ -184,11 +188,17 @@ CMD_FUNC(client_addgroup)
 	// Prompt ident
 	while(1)
 	{
-		line = readline_noac("Ident", "*");
+		line = readline_noac("Ident (enter a single dot to disable identd lookup)", "*");
 		if(!line)
 			goto out;
 		else if(!*line)
-			continue;
+		{
+			// Confirm NULL ident which results in identd lookup being disabled.
+			if(!readline_yesno("Do you really want to disable identd lookup for this client authorization?", NULL))
+				continue;
+			ident = NULL;
+			break;
+		}
 
 		if(strlen(line) > 10)
 		{
@@ -441,10 +451,14 @@ static void show_clientgroup_clients(const char *group, const char *server)
 		table_set_header(table, "ID", "Host", "IP", "Ident");
 		for(int i = 0; i < rows; i++)
 		{
+			const char *tmp = pgsql_nvalue(res, i, "ident");
 			table_col_str(table, i, 0, (char *)pgsql_nvalue(res, i, "id"));
 			table_col_str(table, i, 1, (char *)pgsql_nvalue(res, i, "host"));
 			table_col_str(table, i, 2, (char *)pgsql_nvalue(res, i, "ip"));
-			table_col_str(table, i, 3, (char *)pgsql_nvalue(res, i, "ident"));
+			if(tmp)
+				table_col_str(table, i, 3, (char *)tmp);
+			else
+				table_col_str(table, i, 3, "\033[" COLOR_DARKGRAY "mn/a\033[0m");
 		}
 
 		putc('\n', stdout);
@@ -520,11 +534,17 @@ CMD_FUNC(client_editclients)
 			// Prompt ident
 			while(1)
 			{
-				line = readline_noac("Ident", "*");
+				line = readline_noac("Ident (enter a single dot to disable identd lookup)", "*");
 				if(!line)
 					goto cancel_add;
 				else if(!*line)
-					continue;
+				{
+					// Confirm NULL ident which results in identd lookup being disabled.
+					if(!readline_yesno("Do you really want to disable identd lookup for this client authorization?", NULL))
+						continue;
+					ident = NULL;
+					break;
+				}
 
 				if(strlen(line) > 10)
 				{

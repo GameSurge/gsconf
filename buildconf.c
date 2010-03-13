@@ -215,7 +215,8 @@ static void config_build_clients(struct server_info *server, FILE *file)
 		fprintf(file, "# %s\n", pgsql_nvalue(res, i, "name"));
 		fprintf(file, "Client {\n");
 		fprintf(file, "\tclass = \"%s\";\n", pgsql_nvalue(res, i, "class_name"));
-		fprintf(file, "\tusername = \"%s\";\n", pgsql_nvalue(res, i, "ident"));
+		if((tmp = pgsql_nvalue(res, i, "ident")))
+			fprintf(file, "\tusername = \"%s\";\n", tmp);
 		if((tmp = pgsql_nvalue(res, i, "password")))
 			fprintf(file, "\tpassword = \"%s\";\n", tmp);
 		if((tmp = pgsql_nvalue(res, i, "ip")))
