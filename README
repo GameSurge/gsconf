@@ -435,6 +435,9 @@ SERVER MANAGEMENT
 		Add a port to a server.
 		Prompts for port number, port type, visibility and
 		optional bind ip.
+		If no port is specified, all existing client ports will
+		be copied with the specified IP, which is required in
+		this case.
 		If no ip is specified, the default private/public one
 		is used depending on the port type.
 

@@ -143,7 +143,7 @@ CMD_FUNC(server_info)
 	}
 
 	// Ports
-	res = pgsql_query("SELECT * FROM ports WHERE server = $1 ORDER BY flag_server ASC, port ASC", 1, stringlist_build(server->name, NULL));
+	res = pgsql_query("SELECT * FROM ports WHERE server = $1 ORDER BY flag_server ASC, port ASC, ip ASC", 1, stringlist_build(server->name, NULL));
 	rows = pgsql_num_rows(res);
 	putc('\n', stdout);
 	out("Ports:");
@@ -762,11 +762,14 @@ CMD_FUNC(server_port_add)
 	// Prompt port
 	while(1)
 	{
-		line = readline_noac("Port", NULL);
+		line = readline_noac("Port (leave empty if you want to add a new IP for all current CLIENT ports)", "");
 		if(!line)
 			goto out;
 		else if(!*line)
-			continue;
+		{
+			port = NULL;
+			break;
+		}
 
 		int val = atoi(line);
 		if(val <= 1024)
@@ -779,10 +782,13 @@ CMD_FUNC(server_port_add)
 		break;
 	}
 
-	// Prompt server flag. Default to yes if it's a 4xxx port.
-	flag_server = readline_yesno("Is this a server port?", *port == '4' ? "Yes" : "No");
-	// Prompt hidden flag. Default to yes if it's a server port.
-	flag_hidden = readline_yesno("This is a hidden port?", flag_server ? "Yes" : "No");
+	if(port)
+	{
+		// Prompt server flag. Default to yes if it's a 4xxx port.
+		flag_server = readline_yesno("Is this a server port?", *port == '4' ? "Yes" : "No");
+		// Prompt hidden flag. Default to yes if it's a server port.
+		flag_hidden = readline_yesno("This is a hidden port?", flag_server ? "Yes" : "No");
+	}
 
 	// Prompt bind ip
 	while(1)
@@ -790,6 +796,8 @@ CMD_FUNC(server_port_add)
 		line = readline_noac("IP", "");
 		if(!line)
 			goto out;
+		else if(!*line && !port) // IP is required if no port is given
+			continue;
 		else if(!*line)
 			break;
 
@@ -803,11 +811,33 @@ CMD_FUNC(server_port_add)
 		   (!flag_server && !strcmp(line, server->irc_ip_pub)))
 		{
 			out("This is the default ip; won't set it explicitely");
+			if(!port)
+				goto out;
 			break;
 		}
 
 		ip = strdup(line);
 		break;
+	}
+
+	if(!port)
+	{
+		pgsql_query("INSERT INTO ports\
+				(server, port, ip)\
+			     SELECT	server, port, $1\
+			     FROM	ports p\
+			     WHERE	ip IS NULL AND\
+			     		server = $2 AND\
+					NOT EXISTS (\
+						SELECT	id\
+						FROM	ports\
+						WHERE	server = $2 AND\
+							port = p.port AND\
+							ip = $1\
+					)",
+			    0, stringlist_build(ip, server->name, NULL));
+		out("Ports for %s added successfully", ip);
+		goto out;
 	}
 
 	if(ip)
