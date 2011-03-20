@@ -116,6 +116,7 @@ static void config_build_classes_clients(struct server_info *server, FILE *file)
 						WHERE	cl.group = cg.name AND\
 							cl.server = cg.server\
 					)\
+			   ORDER BY	c.class_name ASC\
 			   \
 			   UNION\
 			   \
@@ -126,7 +127,8 @@ static void config_build_classes_clients(struct server_info *server, FILE *file)
 			   JOIN		opers o ON (o.name = o2s.oper AND o.active)\
 			   JOIN		operhosts oh ON (oh.oper = o.name)\
 			   JOIN		connclasses_users c ON (c.name = o.connclass)\
-			   WHERE	o2s.server = $1",
+			   WHERE	o2s.server = $1\
+			   ORDER BY	c.class_name ASC",
 			  1, stringlist_build(server->name, NULL));
 	rows = pgsql_num_rows(res);
 
@@ -344,7 +346,8 @@ static void config_build_connects(struct server_info *server, FILE *file)
 			   FROM		links l\
 			   JOIN		servers s ON (s.name = l.server)\
 			   LEFT JOIN	ports p ON (p.id = l.port)\
-			   WHERE	l.hub = $1",
+			   WHERE	l.hub = $1\
+			   ORDER BY	s.name ASC",
 			  1, stringlist_build(server->name, NULL));
 	rows = pgsql_num_rows(res);
 
@@ -387,7 +390,8 @@ static void config_build_connects(struct server_info *server, FILE *file)
 					service_private_ip(sl.service, sl.hub, true) AS vhost\
 			   FROM		servicelinks sl\
 			   JOIN		services s ON (s.name = sl.service)\
-			   WHERE	sl.hub = $1",
+			   WHERE	sl.hub = $1\
+			   ORDER BY	s.name ASC",
 			  1, stringlist_build(server->name, NULL));
 	rows = pgsql_num_rows(res);
 
@@ -446,7 +450,9 @@ static void config_build_ports(struct server_info *server, FILE *file)
 					flag_hidden\
 			   FROM		ports\
 			   WHERE	server = $1\
-			   ORDER BY	flag_server DESC",
+			   ORDER BY	flag_server DESC,\
+			   		ip ASC,\
+					port ASC",
 			  1, stringlist_build(server->name, NULL));
 	rows = pgsql_num_rows(res);
 
@@ -517,7 +523,7 @@ static void config_build_uworld(struct server_info *server, FILE *file)
 
 	fprintf(file, "# Services\n");
 
-	res = pgsql_query("SELECT name FROM services WHERE flag_uworld = true", 1, NULL);
+	res = pgsql_query("SELECT name FROM services WHERE flag_uworld = true ORDER BY name ASC", 1, NULL);
 	rows = pgsql_num_rows(res);
 
 	if(rows)
