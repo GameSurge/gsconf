@@ -116,7 +116,7 @@ static void config_build_classes_clients(struct server_info *server, FILE *file)
 						WHERE	cl.group = cg.name AND\
 							cl.server = cg.server\
 					)\
-			   ORDER BY	c.class_name ASC)\
+			   ORDER BY	class_name ASC)\
 			   \
 			   UNION\
 			   \
@@ -128,7 +128,7 @@ static void config_build_classes_clients(struct server_info *server, FILE *file)
 			   JOIN		operhosts oh ON (oh.oper = o.name)\
 			   JOIN		connclasses_users c ON (c.name = o.connclass)\
 			   WHERE	o2s.server = $1\
-			   ORDER BY	c.class_name ASC)",
+			   ORDER BY	class_name ASC)",
 			  1, stringlist_build(server->name, NULL));
 	rows = pgsql_num_rows(res);
 
