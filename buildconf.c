@@ -245,7 +245,8 @@ static void config_build_operators(struct server_info *server, FILE *file)
 			   JOIN		opers o ON (o.name = o2s.oper AND o.active)\
 			   JOIN		operhosts oh ON (oh.oper = o.name)\
 			   WHERE	o2s.server = $1\
-			   ORDER BY	o.name ASC",
+			   ORDER BY	o.name ASC,\
+			   		oh.mask ASC",
 			  1, stringlist_build(server->name, NULL));
 	rows = pgsql_num_rows(res);
 
