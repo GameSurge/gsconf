@@ -464,7 +464,7 @@ CMD_FUNC(class_del)
 	pgsql_free(res);
 
 	// Check for clients
-	res = pgsql_query("SELECT name, server FROM clients WHERE lower(connclass) = lower($1)", 1, stringlist_build(argv[1], NULL));
+	res = pgsql_query("SELECT name, server FROM clientgroups WHERE lower(connclass) = lower($1)", 1, stringlist_build(argv[1], NULL));
 	rows = pgsql_num_rows(res);
 	if(rows)
 	{
