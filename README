@@ -535,13 +535,3 @@ MISC
 	exit
 	quit
 		Quit the application.
-
-
-COPYING
-       Copyright 2010 Adrian Mönnich
-       This is PROPRIETARY, UNPUBLISHED software.
-
-       It may only be used for the GameSurge IRC network.
-       If you are reading this and not in the GameSurge NetOps team,
-       please PM ThiefMaster on GameSurge and tell him from where you
-       got it.
