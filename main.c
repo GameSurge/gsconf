@@ -64,17 +64,17 @@ int main(int argc, char **argv)
 		}
 	}
 
-        int c;
-        struct option options[] = {
+	int c;
+	struct option options[] = {
 		{ "workdir", 1, 0, 'w' },
 		{ "ssh-passphrase", 2, 0, 's' },
 		{ "debug", 0, 0, 'd' },
 		{ "batch", 1, 0, 'b' },
 		{ "no-colors", 1, 0, 'c' },
 		{ NULL, 0, 0, 0 }
-        };
+	};
 
-        while((c = getopt_long(argc, argv, "s::db:c", options, NULL)) != -1)
+	while((c = getopt_long(argc, argv, "s::db:c", options, NULL)) != -1)
 	{
 		switch(c)
 		{

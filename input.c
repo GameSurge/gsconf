@@ -360,9 +360,9 @@ char *bash_dequote_filename(const char *text, int quote_char)
 	{
 		/* Allow backslash-quoted characters to pass through unscathed. */
 		if(*p == '\\')
-        	{
+		{
 			*r++ = *++p;
-		        if(*p == '\0')
+			if(*p == '\0')
 				break;
 			continue;
 		}
