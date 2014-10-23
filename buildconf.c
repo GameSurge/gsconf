@@ -100,7 +100,8 @@ static void config_build_classes_clients(struct server_info *server, FILE *file)
 
 	fprintf(file, "# Client connection classes\n");
 
-	res = pgsql_query("(SELECT	CASE\
+	res = pgsql_query("SELECT * FROM (\
+			   (SELECT	CASE\
 						WHEN NOT cg.class_maxlinks ISNULL\
 						THEN (cg.connclass || '::' || cg.name)\
 						ELSE cg.connclass\
@@ -116,7 +117,7 @@ static void config_build_classes_clients(struct server_info *server, FILE *file)
 						WHERE	cl.group = cg.name AND\
 							cl.server = cg.server\
 					)\
-			   ORDER BY	class_name ASC)\
+			   )\
 			   \
 			   UNION\
 			   \
@@ -128,7 +129,8 @@ static void config_build_classes_clients(struct server_info *server, FILE *file)
 			   JOIN		operhosts oh ON (oh.oper = o.name)\
 			   JOIN		connclasses_users c ON (c.name = o.connclass)\
 			   WHERE	o2s.server = $1\
-			   ORDER BY	class_name ASC)",
+			   )\
+			   ) _ ORDER BY class_name ASC",
 			  1, stringlist_build(server->name, NULL));
 	rows = pgsql_num_rows(res);
 
@@ -305,7 +307,8 @@ static void config_build_connects(struct server_info *server, FILE *file)
 			   FROM		links l\
 			   JOIN		servers s ON (s.name = l.hub)\
 			   LEFT JOIN	ports p ON (p.id = l.port)\
-			   WHERE	l.server = $1",
+			   WHERE	l.server = $1\
+			   ORDER BY	s.name ASC",
 			  1, stringlist_build(server->name, NULL));
 	rows = pgsql_num_rows(res);
 
