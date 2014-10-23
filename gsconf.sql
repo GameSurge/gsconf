@@ -488,7 +488,7 @@ INSERT INTO connclasses_users VALUES ('TrialServerAdmins', '1 minutes 30 seconds
 INSERT INTO connclasses_users VALUES ('Opers', '1 minutes 30 seconds', 0, 6553600, 20480, 'iw', 0, -1, -1, -1, -1, -1, -1, -1, 0, 0, -1, NULL);
 INSERT INTO connclasses_users VALUES ('SeniorOpers', '1 minutes 30 seconds', 0, 6553600, 40960, 'iw', 0, -1, -1, -1, -1, 1, -1, -1, 0, 0, -1, NULL);
 INSERT INTO connclasses_users VALUES ('NetOps', '2 minutes 30 seconds', 0, 65536000, 40960, 'iw', 0, -1, -1, 1, -1, 1, -1, -1, 0, 0, -1, NULL);
-INSERT INTO connclasses_users VALUES ('Staff', '1 minutes 30 seconds', 0, 655360, 10240, 'iwx', -1, 1, -1, -1, 1, -1, -1, -1, -1, -1, 1, 'staff.gamesurge');
+INSERT INTO connclasses_users VALUES ('Staff', '1 minutes 30 seconds', 0, 655360, 10240, 'iwx', -1, 1, -1, -1, 1, -1, -1, -1, -1, -1, 1, 'staff.lameircnet');
 INSERT INTO connclasses_users VALUES ('Bots', '1 minutes 30 seconds', 0, 1048576, 1024, 'iw', -1, 1, -1, -1, 1, 1, -1, -1, -1, -1, 1, NULL);
 INSERT INTO connclasses_users VALUES ('Bots-NoIdle', '1 minutes 30 seconds', 0, 1048576, 1024, 'iw', -1, 1, 1, -1, 1, 1, -1, -1, -1, -1, 1, NULL);
 INSERT INTO connclasses_users VALUES ('Bots-ChServ', '1 minutes 30 seconds', 0, 1048576, 1024, 'iw', -1, 1, 1, 1, 1, 1, -1, -1, -1, -1, 1, NULL);
@@ -507,7 +507,7 @@ INSERT INTO features VALUES ('IPCHECK_CLONE_PERIOD', '400', 'BOTS');
 INSERT INTO features VALUES ('RELIABLE_CLOCK', 'FALSE', '*');
 INSERT INTO features VALUES ('BUFFERPOOL', '64000000', '*');
 INSERT INTO features VALUES ('DEFAULT_LIST_PARAM', '>40', '*');
-INSERT INTO features VALUES ('HIDDEN_HOST', 'user.gamesurge', '*');
+INSERT INTO features VALUES ('HIDDEN_HOST', 'user.lameircnet', '*');
 INSERT INTO features VALUES ('HIDDEN_IP', '127.0.0.1', '*');
 INSERT INTO features VALUES ('MAXCHANNELSPERUSER', '20', '*');
 INSERT INTO features VALUES ('CONNECTTIMEOUT', '15', '*');
@@ -518,15 +518,15 @@ INSERT INTO features VALUES ('ANNOUNCE_INVITES', 'TRUE', '*');
 INSERT INTO features VALUES ('HIS_STATS_w', 'TRUE', '*');
 INSERT INTO features VALUES ('HIS_REMOTE', '0', '*');
 INSERT INTO features VALUES ('HIS_MODEWHO', 'FALSE', '*');
-INSERT INTO features VALUES ('HIS_SERVERNAME', '*.GameSurge.net', '*');
-INSERT INTO features VALUES ('HIS_SERVERINFO', 'The GameSurge IRC Network', '*');
+INSERT INTO features VALUES ('HIS_SERVERNAME', '*.Lame-IRC-Network.net', '*');
+INSERT INTO features VALUES ('HIS_SERVERINFO', 'The Most Lame IRC Network On The Planet', '*');
 INSERT INTO features VALUES ('TOPIC_BURST', 'TRUE', '*');
-INSERT INTO features VALUES ('URL_CLIENTS', 'http://www.gamesurge.net/links/', '*');
-INSERT INTO features VALUES ('URLREG', 'http://www.gamesurge.net/createaccount/', '*');
-INSERT INTO features VALUES ('HIS_URLSERVERS', 'http://www.gamesurge.net/servers/', '*');
+INSERT INTO features VALUES ('URL_CLIENTS', 'http://www.lame-irc-network.net', '*');
+INSERT INTO features VALUES ('URLREG', 'http://www.lame-irc-network.net', '*');
+INSERT INTO features VALUES ('HIS_URLSERVERS', 'http://www.lame-irc-network.net', '*');
 INSERT INTO features VALUES ('MAXCHANNELSPERUSER', '40', 'STAFF');
 INSERT INTO features VALUES ('NICKLEN', '30', '*');
-INSERT INTO features VALUES ('NETWORK', 'GameSurge', '*');
+INSERT INTO features VALUES ('NETWORK', 'LameIRCNetwork', '*');
 
 
 --
@@ -538,10 +538,10 @@ INSERT INTO features VALUES ('NETWORK', 'GameSurge', '*');
 -- Data for Name: jupes; Type: TABLE DATA; Schema: public; Owner: gsdev
 --
 
-INSERT INTO jupes VALUES ('Services', 'NickServ,ChanServ,OperServ,MemoServ,HelpServ,RegServ,AuthServ,OpServ,Global,NetServ,SpamServ');
-INSERT INTO jupes VALUES ('Services2', 'NickServX,ChanServX,OperServX,MemoServX,HelpServX,AuthServX,OpServX,GlobalX,NetServX,SpamServX');
-INSERT INTO jupes VALUES ('Phishing', 'login,gamesurge,pass,newpass,org,auth');
-INSERT INTO jupes VALUES ('Bots', 'IRPG,GameSurge-Bot,HostServ');
+INSERT INTO jupes VALUES ('Services', 'NickServ,ChanServ,OperServ,MemoServ,HelpServ,RegServ,AuthServ,OpServ,Global,SpamServ');
+INSERT INTO jupes VALUES ('Services2', 'NickServX,ChanServX,OperServX,MemoServX,HelpServX,AuthServX,OpServX,GlobalX,SpamServX');
+INSERT INTO jupes VALUES ('Phishing', 'login,pass,newpass,org,auth');
+INSERT INTO jupes VALUES ('Bots', 'IRPG,HostServ');
 INSERT INTO jupes VALUES ('OneLetter', 'A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,{,|,},~,-,_,`');
 
 
