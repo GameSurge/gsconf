@@ -19,7 +19,7 @@ clean:
 # rule for creating final binary
 $(BIN): $(OBJ)
 	@printf "   \033[38;5;69mLD\033[0m        $@\n"
-	@$(CC) $(LDFLAGS) $(LIBS) $(OBJ) -o $(BIN)
+	@$(CC) $(LDFLAGS) $(OBJ) $(LIBS) -o $(BIN)
 
 # rule for creating object files
 $(OBJ) : $(TMPDIR)/%.o : %.c
