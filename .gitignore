@@ -3,3 +3,4 @@
 .*.swp
 gsconf
 gsconf.cfg
+.gsconf_history
