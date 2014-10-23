@@ -340,7 +340,7 @@ int ssh_scp_get(struct ssh_session *session, const char *remote_file, const char
 		received += res;
 	}
 
-	debug("Downloaded %llu/%llu bytes", received, fileinfo.st_size);
+	debug("Downloaded %llu/%llu bytes", (long long)received, (long long)fileinfo.st_size);
 
 	libssh2_channel_free(channel);
 	fclose(outfile);
@@ -415,7 +415,7 @@ int ssh_scp_put(struct ssh_session *session, const char *local_file, const char 
 		}
 	}
 
-	debug("Uploaded %llu/%llu bytes", sent, fileinfo.st_size);
+	debug("Uploaded %llu/%llu bytes", (long long)sent, (long long)fileinfo.st_size);
 
 	libssh2_channel_send_eof(channel);
 	libssh2_channel_wait_eof(channel);
