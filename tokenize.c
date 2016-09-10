@@ -41,7 +41,7 @@ unsigned int tokenize(char *str, char **vec, unsigned int vec_size, char token, 
 
 		if(!allow_empty)
 		{
-			while((*ch == token))
+			while(*ch == token)
 				ch++;
 		}
 
@@ -188,7 +188,7 @@ unsigned int itokenize(char *str, char **vec, unsigned int vec_size, char token,
 		{
 			*ch++ = '\0';
 
-			if((*ch == ltoken))
+			if(*ch == ltoken)
 			{
 				*ch++ = '\0';
 				vec[count++] = ch;

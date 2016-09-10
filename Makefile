@@ -1,6 +1,6 @@
 BIN = gsconf
 LIBS = -lssh2 -lreadline -lpq
-CFLAGS = -pipe -Werror -Wall -Wextra -Wno-unused -g -I `pg_config --includedir`
+CFLAGS = -pipe -Werror -Wall -Wextra -Wno-unused -Wno-unused-parameter -g -I `pg_config --includedir`
 LDFLAGS =
 
 SRC = $(wildcard *.c)

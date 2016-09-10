@@ -174,5 +174,5 @@ double genrand_res53(void)
 
 unsigned int mt_rand(unsigned int min, unsigned int max)
 {
-	return abs(genrand_int32() % (max-min+1)) + min;
+	return (genrand_int32() % (max-min+1)) + min;
 }
