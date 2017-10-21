@@ -503,7 +503,7 @@ static void config_build_webirc(struct server_info *server, FILE *file)
 
 		fprintf(file, "# %s\n", pgsql_nvalue(res, i, "name"));
 		fprintf(file, "WebIRC {\n");
-		fprintf(file, "\thost = \"%s\";\n", pgsql_nvalue(res, i, "ip"));
+		fprintf(file, "\tip = \"%s\";\n", pgsql_nvalue(res, i, "ip"));
 		fprintf(file, "\tpassword = \"%s\";\n", pgsql_nvalue(res, i, "password"));
 		if(ident)
 			fprintf(file, "\tident = \"%s\";\n", ident);
