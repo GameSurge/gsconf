@@ -164,15 +164,12 @@ static void config_build_classes_clients(struct server_info *server, FILE *file)
 		IRCD_PRIV(restart);
 		IRCD_PRIV(chan_limit);
 		IRCD_PRIV(notargetlimit);
-		if(server->type == SERVER_STAFF || server->type == SERVER_BOTS)
-		{
-			IRCD_PRIV(umode_nochan);
-			IRCD_PRIV(umode_noidle);
-			IRCD_PRIV(umode_chserv);
-			IRCD_PRIV(flood);
-			IRCD_PRIV(pseudoflood);
-			IRCD_PRIV(gline_immune);
-		}
+		IRCD_PRIV(umode_nochan);
+		IRCD_PRIV(umode_noidle);
+		IRCD_PRIV(umode_chserv);
+		IRCD_PRIV(flood);
+		IRCD_PRIV(pseudoflood);
+		IRCD_PRIV(gline_immune);
 
 		fprintf(file, "};\n");
 		last_class = pgsql_nvalue(res, i, "class_name");
@@ -276,15 +273,12 @@ static void config_build_operators(struct server_info *server, FILE *file)
 		IRCD_PRIV(die);
 		IRCD_PRIV(restart);
 		IRCD_PRIV(notargetlimit);
-		if(server->type == SERVER_STAFF || server->type == SERVER_BOTS)
-		{
-			IRCD_PRIV(umode_nochan);
-			IRCD_PRIV(umode_noidle);
-			IRCD_PRIV(umode_chserv);
-			IRCD_PRIV(flood);
-			IRCD_PRIV(pseudoflood);
-			IRCD_PRIV(gline_immune);
-		}
+		IRCD_PRIV(umode_nochan);
+		IRCD_PRIV(umode_noidle);
+		IRCD_PRIV(umode_chserv);
+		IRCD_PRIV(flood);
+		IRCD_PRIV(pseudoflood);
+		IRCD_PRIV(gline_immune);
 
 		fprintf(file, "};\n");
 	}
