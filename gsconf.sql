@@ -348,7 +348,8 @@ CREATE TABLE ports (
     port integer NOT NULL,
     ip inet,
     flag_server boolean DEFAULT false NOT NULL,
-    flag_hidden boolean DEFAULT false NOT NULL
+    flag_hidden boolean DEFAULT false NOT NULL,
+    flag_webirc boolean DEFAULT false NOT NULL
 );
 
 

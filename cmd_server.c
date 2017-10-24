@@ -143,7 +143,7 @@ CMD_FUNC(server_info)
 	}
 
 	// Ports
-	res = pgsql_query("SELECT * FROM ports WHERE server = $1 ORDER BY flag_server ASC, port ASC, ip ASC", 1, stringlist_build(server->name, NULL));
+	res = pgsql_query("SELECT * FROM ports WHERE server = $1 ORDER BY flag_server ASC, flag_webirc ASC, port ASC, ip ASC", 1, stringlist_build(server->name, NULL));
 	rows = pgsql_num_rows(res);
 	putc('\n', stdout);
 	out("Ports:");
@@ -155,9 +155,11 @@ CMD_FUNC(server_info)
 	{
 		const char *ip;
 		char flags[3] = { "C " };
-		int flag_server;
+		int flag_server, flag_webirc;
 		if((flag_server = !strcasecmp(pgsql_nvalue(res, i, "flag_server"), "t")))
 			flags[0] = 'S';
+		else if((flag_webirc = !strcasecmp(pgsql_nvalue(res, i, "flag_webirc"), "t")))
+			flags[0] = 'W';
 		if(!strcasecmp(pgsql_nvalue(res, i, "flag_hidden"), "t"))
 			flags[1] = 'H';
 
@@ -744,7 +746,7 @@ CMD_FUNC(server_port_add)
 	char *line;
 	struct server_info *server;
 	char *port = NULL, *ip = NULL;
-	int flag_server, flag_hidden;
+	int flag_server, flag_hidden, flag_webirc = 0;
 	int cnt;
 
 	if(argc < 2)
@@ -786,6 +788,11 @@ CMD_FUNC(server_port_add)
 	{
 		// Prompt server flag. Default to yes if it's a 4xxx port.
 		flag_server = readline_yesno("Is this a server port?", *port == '4' ? "Yes" : "No");
+		if (!flag_server)
+		{
+			// Prompt webirc flag.
+			flag_webirc = readline_yesno("Is this a webirc port?", "No");
+		}
 		// Prompt hidden flag. Default to yes if it's a server port.
 		flag_hidden = readline_yesno("This is a hidden port?", flag_server ? "Yes" : "No");
 	}
@@ -823,8 +830,8 @@ CMD_FUNC(server_port_add)
 	if(!port)
 	{
 		pgsql_query("INSERT INTO ports\
-				(server, port, ip)\
-			     SELECT	server, port, $1\
+				(server, port, flag_hidden, flag_webirc, ip)\
+			     SELECT	server, port, flag_hidden, flag_webirc, $1\
 			     FROM	ports p\
 			     WHERE	ip IS NULL AND\
 			     		server = $2 AND\
@@ -852,12 +859,13 @@ CMD_FUNC(server_port_add)
 	}
 
 	pgsql_query("INSERT INTO ports\
-			(server, port, ip, flag_server, flag_hidden)\
+			(server, port, ip, flag_server, flag_hidden, flag_webirc)\
 		     VALUES\
-			($1, $2, $3, $4, $5)",
-		    0, stringlist_build_n(5, server->name, port, ip,
+			($1, $2, $3, $4, $5, $6)",
+		    0, stringlist_build_n(6, server->name, port, ip,
 					     (flag_server ? "t" : "f"),
-					     (flag_hidden ? "t" : "f")));
+					     (flag_hidden ? "t" : "f"),
+					     (flag_webirc ? "t" : "f")));
 
 	out("Port %s added successfully", port);
 

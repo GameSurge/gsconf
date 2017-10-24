@@ -445,7 +445,8 @@ static void config_build_ports(struct server_info *server, FILE *file)
 	res = pgsql_query("SELECT	port,\
 					ip,\
 					flag_server,\
-					flag_hidden\
+					flag_hidden,\
+					flag_webirc\
 			   FROM		ports\
 			   WHERE	server = $1\
 			   ORDER BY	flag_server DESC,\
@@ -458,6 +459,7 @@ static void config_build_ports(struct server_info *server, FILE *file)
 	{
 		int flag_server = !strcasecmp(pgsql_nvalue(res, i, "flag_server"), "t");
 		int flag_hidden = !strcasecmp(pgsql_nvalue(res, i, "flag_hidden"), "t");
+		int flag_webirc = !strcasecmp(pgsql_nvalue(res, i, "flag_webirc"), "t");
 		unsigned int port = atoi(pgsql_nvalue(res, i, "port"));
 		const char *ip = pgsql_nvalue(res, i, "ip");
 
@@ -469,6 +471,8 @@ static void config_build_ports(struct server_info *server, FILE *file)
 			fprintf(file, "server = yes; ");
 		if(flag_hidden)
 			fprintf(file, "hidden = yes; ");
+		if(flag_webirc && !flag_server)
+			fprintf(file, "WebIRC = yes; ");
 		fprintf(file, "};\n");
 	}
 
